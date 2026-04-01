@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
+import io.mvnpm.raclette.ratelimit.RateLimitConfig;
 import io.mvnpm.raclette.types.Status;
 import io.mvnpm.raclette.types.Uri;
 
@@ -134,6 +135,11 @@ public class Raclette implements AutoCloseable {
 
         public Builder excludeLinkLocalIps(boolean exclude) {
             clientBuilder.excludeLinkLocalIps(exclude);
+            return this;
+        }
+
+        public Builder rateLimitConfig(RateLimitConfig rateLimitConfig) {
+            clientBuilder.rateLimitConfig(rateLimitConfig);
             return this;
         }
 

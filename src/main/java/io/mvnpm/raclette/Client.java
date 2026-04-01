@@ -8,6 +8,10 @@ import java.util.Map;
 import io.mvnpm.raclette.checker.FileChecker;
 import io.mvnpm.raclette.checker.WebsiteChecker;
 import io.mvnpm.raclette.filter.Filter;
+import io.mvnpm.raclette.ratelimit.HostKey;
+import io.mvnpm.raclette.ratelimit.HostPool;
+import io.mvnpm.raclette.ratelimit.Permit;
+import io.mvnpm.raclette.ratelimit.RateLimitConfig;
 import io.mvnpm.raclette.types.Status;
 import io.mvnpm.raclette.types.Uri;
 
@@ -22,11 +26,13 @@ public class Client implements AutoCloseable {
     private final Filter filter;
     private final FileChecker fileChecker;
     private final WebsiteChecker websiteChecker;
+    private final HostPool hostPool;
 
-    Client(Filter filter, FileChecker fileChecker, WebsiteChecker websiteChecker) {
+    Client(Filter filter, FileChecker fileChecker, WebsiteChecker websiteChecker, HostPool hostPool) {
         this.filter = filter;
         this.fileChecker = fileChecker;
         this.websiteChecker = websiteChecker;
+        this.hostPool = hostPool;
     }
 
     /**
@@ -44,13 +50,27 @@ public class Client implements AutoCloseable {
 
         return switch (uri.kind()) {
             case FILE -> fileChecker.check(uri);
-            case HTTP -> websiteChecker.check(uri);
+            case HTTP -> checkWithRateLimit(uri);
             case MAIL -> Status.excluded("Mail checking not supported");
             // TEL is always caught by isExcluded() above (lychee client.rs:548),
             // so this branch is only a safety net.
             case TEL -> Status.excluded("Tel URIs are not checked");
             case UNSUPPORTED -> Status.unsupported(uri.url());
         };
+    }
+
+    /**
+     * Check an HTTP URI with per-host rate limiting.
+     * Matches lychee's Client::check_website flow: acquire permit, check, release.
+     */
+    private Status checkWithRateLimit(Uri uri) {
+        HostKey hostKey = HostKey.fromUri(uri);
+        if (hostKey == null) {
+            return websiteChecker.check(uri);
+        }
+        try (Permit permit = hostPool.acquire(hostKey.host())) {
+            return websiteChecker.check(uri);
+        }
     }
 
     /**
@@ -79,6 +99,7 @@ public class Client implements AutoCloseable {
     @Override
     public void close() {
         websiteChecker.close();
+        hostPool.close();
     }
 
     /**
@@ -105,6 +126,9 @@ public class Client implements AutoCloseable {
         private List<String> fallbackExtensions = List.of();
         private List<String> indexFiles = null;
         private boolean includeFragments = false;
+
+        // Rate limit options
+        private RateLimitConfig rateLimitConfig = RateLimitConfig.defaults();
 
         // Filter options
         private Filter.FilterBuilder filterBuilder = Filter.builder();
@@ -164,6 +188,11 @@ public class Client implements AutoCloseable {
             return this;
         }
 
+        public ClientBuilder rateLimitConfig(RateLimitConfig rateLimitConfig) {
+            this.rateLimitConfig = rateLimitConfig;
+            return this;
+        }
+
         public ClientBuilder excludePrivateIps(boolean exclude) {
             filterBuilder.excludePrivateIps(exclude);
             return this;
@@ -206,7 +235,8 @@ public class Client implements AutoCloseable {
             FileChecker fileChecker = new FileChecker(fallbackExtensions, indexFiles, includeFragments);
             WebsiteChecker websiteChecker = new WebsiteChecker(maxRetries, retryWaitTime,
                     timeout, maxRedirects, customHeaders, userAgent, allowInsecure, requireHttps);
-            return new Client(filter, fileChecker, websiteChecker);
+            HostPool hostPool = new HostPool(rateLimitConfig);
+            return new Client(filter, fileChecker, websiteChecker, hostPool);
         }
     }
 }
