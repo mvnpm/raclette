@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.mvnpm</groupId>
+    <artifactId>raclette</artifactId>
+    <name>Raclette - Java Link Checker</name>
+    <version>999-SNAPSHOT</version>
+
+    <description>Java link checker library, equivalent to lychee</description>
+    <url>https://github.com/mvnpm/raclette/</url>
+    <scm>
+        <connection>scm:git:git://github.com/mvnpm/raclette.git</connection>
+        <developerConnection>scm:git:ssh://github.com:mvnpm/raclette.git</developerConnection>
+        <url>http://github.com/mvnpm/raclette/tree/main</url>
+        <tag>HEAD</tag>
+    </scm>
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>https://opensource.org/license/apache-2-0</url>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <name>Andy Damevin</name>
+            <email>ia3andy@gmail.com</email>
+            <organization>commonhaus</organization>
+            <organizationUrl>https://www.commonhaus.org/</organizationUrl>
+        </developer>
+    </developers>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <jsoup.version>1.18.3</jsoup.version>
+        <vertx.version>4.5.12</vertx.version>
+
+        <junit.version>5.11.4</junit.version>
+        <assertj.version>3.27.3</assertj.version>
+        <wiremock.version>3.10.0</wiremock.version>
+
+        <surefire.plugin.version>3.5.4</surefire.plugin.version>
+        <formatter.plugin.version>2.29.0</formatter.plugin.version>
+        <impsort.plugin.version>1.12.0</impsort.plugin.version>
+        <quarkus.ide-config.version>3.29.1</quarkus.ide-config.version>
+        <maven-javadoc-plugin.version>3.5.0</maven-javadoc-plugin.version>
+        <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
+        <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
+        <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
+    </properties>
+
+    <dependencies>
+        <!-- HTML parsing -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>${jsoup.version}</version>
+        </dependency>
+
+        <!-- HTTP client -->
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-web-client</artifactId>
+            <version>${vertx.version}</version>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock</artifactId>
+            <version>${wiremock.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire.plugin.version}</version>
+            </plugin>
+            <plugin>
+                <groupId>net.revelc.code.formatter</groupId>
+                <artifactId>formatter-maven-plugin</artifactId>
+                <version>${formatter.plugin.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>io.quarkus</groupId>
+                        <artifactId>quarkus-ide-config</artifactId>
+                        <version>${quarkus.ide-config.version}</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <configFile>eclipse-format.xml</configFile>
+                    <lineEnding>KEEP</lineEnding>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>net.revelc.code</groupId>
+                <artifactId>impsort-maven-plugin</artifactId>
+                <version>${impsort.plugin.version}</version>
+                <configuration>
+                    <groups>java.,javax.,jakarta.,org.,com.</groups>
+                    <staticGroups>*</staticGroups>
+                    <removeUnused>true</removeUnused>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>sort-imports</id>
+                        <goals>
+                            <goal>sort</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.10.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
+                            <waitUntil>published</waitUntil>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-release-plugin</artifactId>
+                        <version>${maven-release-plugin.version}</version>
+                        <configuration>
+                            <preparationGoals>clean install</preparationGoals>
+                            <autoVersionSubmodules>true</autoVersionSubmodules>
+                            <tagNameFormat>@{project.version}</tagNameFormat>
+                            <pushChanges>false</pushChanges>
+                            <localCheckout>true</localCheckout>
+                            <remoteTagging>false</remoteTagging>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>${maven-source-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>${maven-javadoc-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${maven-gpg-plugin.version}</version>
+                        <configuration>
+                            <gpgArguments>
+                                <arg>--pinentry-mode</arg>
+                                <arg>loopback</arg>
+                            </gpgArguments>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>
