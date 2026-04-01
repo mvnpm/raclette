@@ -1,0 +1,174 @@
+---
+title: Raclette
+description: A fast, lightweight Java link checker — the JVM equivalent of lychee
+layout: home
+---
+
+<!-- Hero -->
+<section class="max-w-7xl mx-auto px-6 py-24 text-center">
+  <div class="mb-8">
+    <img src="{site.url('/raclette-logo.svg')}" alt="Raclette" class="w-80 h-80 mx-auto">
+  </div>
+  <h1 class="text-5xl md:text-6xl font-extrabold text-surface-100 mb-6">
+    Catch broken links <br class="hidden md:block">
+    <span class="text-accent">in Java</span>
+  </h1>
+  <p class="text-xl text-surface-400 max-w-2xl mx-auto mb-10">
+    Virtual-threaded, lightweight link checking for websites and HTML content.
+  </p>
+  <div class="flex gap-4 justify-center">
+    <a href="#guides" class="px-6 py-3 bg-accent text-surface-900 font-semibold rounded-lg hover:bg-accent-light transition-colors">
+      Get started
+    </a>
+    <a href="https://github.com/mvnpm/raclette" class="px-6 py-3 border border-surface-600 text-surface-200 font-semibold rounded-lg hover:border-surface-400 transition-colors">
+      View on GitHub
+    </a>
+  </div>
+</section>
+
+<!-- Feature Cards -->
+<section class="max-w-7xl mx-auto px-6 pb-24">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <div class="bg-surface-800 border border-surface-700 rounded-xl p-6 hover:border-accent/40 transition-colors">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-accent text-2xl">⚡</span>
+        <h3 class="text-lg font-semibold text-surface-100">Virtual Threads</h3>
+      </div>
+      <p class="text-surface-400">
+        Built on Java 21 virtual threads for lightweight, high-throughput concurrent link checking without callback complexity.
+      </p>
+    </div>
+
+    <div class="bg-surface-800 border border-surface-700 rounded-xl p-6 hover:border-accent/40 transition-colors">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-accent text-2xl">📄</span>
+        <h3 class="text-lg font-semibold text-surface-100">HTML Extraction</h3>
+      </div>
+      <p class="text-surface-400">
+        Extracts links from HTML using JSoup — anchors, images, scripts, srcsets, and more. Perfect for documentation and static sites.
+      </p>
+    </div>
+
+    <div class="bg-surface-800 border border-surface-700 rounded-xl p-6 hover:border-accent/40 transition-colors">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-accent text-2xl">📦</span>
+        <h3 class="text-lg font-semibold text-surface-100">Java Library</h3>
+      </div>
+      <p class="text-surface-400">
+        Drop it into any JVM project as a Maven dependency. No external binaries, no native installs required.
+      </p>
+    </div>
+
+    <div class="bg-surface-800 border border-surface-700 rounded-xl p-6 hover:border-accent/40 transition-colors">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-accent text-2xl">🔧</span>
+        <h3 class="text-lg font-semibold text-surface-100">Configurable</h3>
+      </div>
+      <p class="text-surface-400">
+        Fine-grained filtering, rate limiting, custom headers, and quirks handling to adapt to any site's behavior.
+      </p>
+    </div>
+
+    <div class="md:col-span-2 bg-surface-800 border border-accent/20 rounded-xl p-6">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-accent text-2xl">🍒</span>
+        <h3 class="text-lg font-semibold text-surface-100">Inspired by lychee</h3>
+      </div>
+      <p class="text-surface-400">
+        Raclette is heavily inspired by <a href="https://github.com/lycheeverse/lychee" class="text-accent hover:text-accent-light underline underline-offset-2">lychee</a>, the excellent async link checker written in Rust. We follow lychee's design philosophy — its filtering, quirks system, and overall architecture — and bring it to the JVM.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- Overview Section -->
+<section id="overview" class="border-t border-surface-700">
+  <div class="max-w-4xl mx-auto px-6 py-20">
+    <h2 class="text-3xl font-bold text-surface-100 mb-8">What is Raclette?</h2>
+    <div class="space-y-4 text-surface-300 leading-relaxed">
+      <p>
+        Raclette is a fast, lightweight link checker for the JVM — the Java equivalent of
+        <a href="https://github.com/lycheeverse/lychee" class="text-accent hover:text-accent-light underline underline-offset-2">lychee</a>.
+        It finds broken hyperlinks and mail addresses in your HTML files and websites.
+      </p>
+      <p>
+        Built with Java 21 virtual threads and java.net.http.HttpClient, Raclette handles thousands of concurrent requests efficiently.
+        JSoup powers the HTML parsing, delivering reliable link extraction from any document structure.
+      </p>
+    </div>
+
+    <h3 class="text-2xl font-bold text-surface-100 mt-12 mb-6">Why Raclette?</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="flex gap-3">
+        <span class="text-accent mt-1">&#10003;</span>
+        <span class="text-surface-300"><strong class="text-surface-100">JVM-native</strong> — no shelling out to external tools</span>
+      </div>
+      <div class="flex gap-3">
+        <span class="text-accent mt-1">&#10003;</span>
+        <span class="text-surface-300"><strong class="text-surface-100">Virtual threads</strong> — lightweight, massive concurrency</span>
+      </div>
+      <div class="flex gap-3">
+        <span class="text-accent mt-1">&#10003;</span>
+        <span class="text-surface-300"><strong class="text-surface-100">Rate limiting</strong> — respect target servers</span>
+      </div>
+      <div class="flex gap-3">
+        <span class="text-accent mt-1">&#10003;</span>
+        <span class="text-surface-300"><strong class="text-surface-100">Quirks system</strong> — handle site-specific behaviors</span>
+      </div>
+      <div class="flex gap-3">
+        <span class="text-accent mt-1">&#10003;</span>
+        <span class="text-surface-300"><strong class="text-surface-100">HTML parsing</strong> — thorough link extraction via JSoup</span>
+      </div>
+      <div class="flex gap-3">
+        <span class="text-accent mt-1">&#10003;</span>
+        <span class="text-surface-300"><strong class="text-surface-100">Open source</strong> — Apache 2.0 licensed</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Quick Start Section -->
+<section id="guides" class="border-t border-surface-700">
+  <div class="max-w-4xl mx-auto px-6 py-20">
+    <h2 class="text-3xl font-bold text-surface-100 mb-8">Getting Started</h2>
+
+    <h3 class="text-lg font-semibold text-surface-100 mb-4">Add the dependency</h3>
+    <div class="bg-surface-800 border border-surface-700 rounded-lg p-4 mb-8 overflow-x-auto">
+      <pre class="text-sm text-surface-200 font-mono"><code>&lt;dependency&gt;
+    &lt;groupId&gt;io.mvnpm&lt;/groupId&gt;
+    &lt;artifactId&gt;raclette&lt;/artifactId&gt;
+    &lt;version&gt;0.1.0&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+    </div>
+
+    <h3 class="text-lg font-semibold text-surface-100 mb-4">Check a website</h3>
+    <div class="bg-surface-800 border border-surface-700 rounded-lg p-4 mb-8 overflow-x-auto">
+      <pre class="text-sm text-surface-200 font-mono"><code class="language-java">try (Raclette raclette = Raclette.builder().build()) {
+    Status status = raclette.check("https://example.com");
+    if (status.isSuccess()) {
+        System.out.println("Link is valid!");
+    } else {
+        System.out.println("Broken: " + status);
+    }
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- Trivia -->
+<section class="border-t border-surface-700">
+  <div class="max-w-4xl mx-auto px-6 py-20">
+    <h2 class="text-3xl font-bold text-surface-100 mb-8">Trivia</h2>
+    <div class="space-y-4 text-surface-300 leading-relaxed">
+      <h3 class="text-xl font-semibold text-surface-100">Project Name</h3>
+      <p>
+        Raclette is named after the 450-year-old cheese dish, claimed by both Switzerland and France — a nod to the original
+        <a href="https://github.com/lycheeverse/lychee" class="text-accent hover:text-accent-light underline underline-offset-2">lychee</a>
+        link checker. Where lychee is a fruit, raclette is melted cheese:
+        warm, comforting, and makes everything better. Also, it <em>grates</em> through your links.
+      </p>
+    </div>
+  </div>
+</section>

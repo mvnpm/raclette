@@ -1,0 +1,47 @@
+---
+layout: default
+---
+{@io.quarkiverse.roq.frontmatter.runtime.model.Page page}
+{@io.quarkiverse.roq.frontmatter.runtime.model.Site site}
+<div class="max-w-7xl mx-auto px-6 py-12 flex gap-12">
+
+  <!-- Sidebar -->
+  <nav class="hidden lg:block w-56 shrink-0">
+    <div class="sticky top-24 space-y-6">
+
+      <div>
+        <h4 class="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3">Guides</h4>
+        <ul class="space-y-1.5">
+          <li><a href="{site.url('/docs/overview')}" class="text-sm text-surface-300 hover:text-accent transition-colors">Overview</a></li>
+          <li><a href="{site.url('/docs/getting-started')}" class="text-sm text-surface-300 hover:text-accent transition-colors">Getting Started</a></li>
+          <li><a href="{site.url('/docs/configuration')}" class="text-sm text-surface-300 hover:text-accent transition-colors">Configuration</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3">Recipes</h4>
+        <ul class="space-y-1.5">
+          <li><a href="{site.url('/docs/collecting-links')}" class="text-sm text-surface-300 hover:text-accent transition-colors">Collecting Links</a></li>
+          <li><a href="{site.url('/docs/excluding-links')}" class="text-sm text-surface-300 hover:text-accent transition-colors">Excluding Links</a></li>
+          <li><a href="{site.url('/docs/fragments')}" class="text-sm text-surface-300 hover:text-accent transition-colors">Fragment Checking</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3">Internals</h4>
+        <ul class="space-y-1.5">
+          <li><a href="{site.url('/docs/how-it-works')}" class="text-sm text-surface-300 hover:text-accent transition-colors">How It Works</a></li>
+          <li><a href="{site.url('/docs/credits')}" class="text-sm text-surface-300 hover:text-accent transition-colors">Credits</a></li>
+        </ul>
+      </div>
+
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <article class="min-w-0 flex-1 prose prose-invert prose-accent max-w-none">
+    <h1 class="text-4xl font-bold text-surface-100 mb-8">{page.title}</h1>
+    {#insert /}
+  </article>
+
+</div>

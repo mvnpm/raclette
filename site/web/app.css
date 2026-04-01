@@ -1,0 +1,24 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+    --color-accent: #D4A520;
+    --color-accent-light: #E8C547;
+    --color-accent-dark: #A67C00;
+    --color-accent-low: #3D2E0A;
+    --color-accent-glow: #F5D76E;
+
+    --color-surface-900: #1A1814;
+    --color-surface-800: #24221C;
+    --color-surface-700: #2E2C25;
+    --color-surface-600: #3A382F;
+    --color-surface-500: #55524A;
+    --color-surface-400: #88857D;
+    --color-surface-300: #B0ADA6;
+    --color-surface-200: #D4D2CD;
+    --color-surface-100: #EEEDEA;
+    --color-surface-50: #F7F6F4;
+
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Fira Mono', monospace;
+}

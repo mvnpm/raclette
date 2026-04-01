@@ -2,3 +2,5 @@ target/
 .idea/
 *.iml
 /nbactions.xml
+node_modules/
+.quarkus/
