@@ -168,7 +168,8 @@ public class FileChecker {
             }
             return Status.error(new ErrorKind.InvalidFragment(uri));
         } catch (IOException e) {
-            // If we can't read the file, skip fragment check
+            // Lychee warns and returns Ok when file can't be read for fragment checking
+            // (file.rs:297-300). Do not return an error here.
             return Status.ok();
         }
     }

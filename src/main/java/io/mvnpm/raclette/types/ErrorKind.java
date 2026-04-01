@@ -17,7 +17,7 @@ public sealed interface ErrorKind {
     record NetworkError(String message) implements ErrorKind {
     }
 
-    record HttpStatus(int code) implements ErrorKind {
+    record HttpStatus(int statusCode, String message) implements ErrorKind {
     }
 
     record Timeout(String message) implements ErrorKind {

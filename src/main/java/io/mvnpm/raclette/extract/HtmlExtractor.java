@@ -144,7 +144,8 @@ public class HtmlExtractor {
                     }
                 }
 
-                // Skip prefix attribute
+                // Skip prefix attribute on ANY element (not just <html>).
+                // Matches lychee html5gum.rs:170 — applies to all elements, not only RDFa on <html>.
                 if (el.hasAttr("prefix")) {
                     return;
                 }
@@ -208,9 +209,10 @@ public class HtmlExtractor {
                 // but filtered out at the end unless includeVerbatim=true).
                 // When !includeVerbatim, skip text nodes entirely (no text URLs).
                 if (includeVerbatim) {
-                    Range.Position textPos = textNode.sourceRange().start();
-                    extractPlainTextUrls(textNode.getWholeText(), links, textPos.lineNumber(),
-                            textPos.columnNumber());
+                    Range sourceRange = textNode.sourceRange();
+                    int startLine = sourceRange.isTracked() ? sourceRange.start().lineNumber() : 0;
+                    int startCol = sourceRange.isTracked() ? sourceRange.start().columnNumber() : 0;
+                    extractPlainTextUrls(textNode.getWholeText(), links, startLine, startCol);
                 }
             }
         }

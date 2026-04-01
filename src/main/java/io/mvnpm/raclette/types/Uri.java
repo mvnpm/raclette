@@ -33,7 +33,7 @@ public record Uri(String url, UriKind kind) implements Comparable<Uri> {
         if (input.startsWith("tel:")) {
             return new Uri(input, UriKind.TEL);
         }
-        if (input.startsWith("file://") || input.startsWith("file:///")) {
+        if (input.startsWith("file://")) {
             return new Uri(input, UriKind.FILE);
         }
         if (input.startsWith("http://") || input.startsWith("https://")) {
@@ -47,6 +47,9 @@ public record Uri(String url, UriKind kind) implements Comparable<Uri> {
         if (input.startsWith("ftp://") || input.startsWith("gopher://") || input.startsWith("slack://")) {
             return new Uri(input, UriKind.UNSUPPORTED);
         }
+        // Any other valid URI with a scheme is treated as HTTP (website).
+        // Lychee does not classify schemes in Uri — scheme filtering (e.g. rejecting data:, javascript:)
+        // is handled by Filter, not here. See lychee client.rs:546-551.
         try {
             URI uri = URI.create(input);
             if (uri.getScheme() != null) {

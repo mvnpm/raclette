@@ -39,4 +39,37 @@ public sealed interface Status {
     static Status unsupported(String scheme) {
         return new Unsupported(scheme);
     }
+
+    default boolean isSuccess() {
+        return this instanceof Ok;
+    }
+
+    default boolean isError() {
+        return this instanceof Error;
+    }
+
+    default boolean isTimeout() {
+        return this instanceof Timeout;
+    }
+
+    default boolean isExcluded() {
+        return this instanceof Excluded;
+    }
+
+    default boolean isUnsupported() {
+        return this instanceof Unsupported;
+    }
+
+    /**
+     * Extract the HTTP status code if available.
+     */
+    default Integer code() {
+        if (this instanceof Ok ok) {
+            return ok.statusCode();
+        }
+        if (this instanceof Error err && err.error() instanceof ErrorKind.HttpStatus hs) {
+            return hs.statusCode();
+        }
+        return null;
+    }
 }
