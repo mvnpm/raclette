@@ -1,5 +1,5 @@
 <p align="center">
-  <span style="font-size: 64px">&#x1F9C0;</span>
+  <img src="site/public/raclette-logo.svg" alt="Raclette" width="200" height="200">
 </p>
 
 <h1 align="center">Raclette</h1>
@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/mvnpm/raclette/actions"><img src="https://github.com/mvnpm/raclette/actions/workflows/build.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/mvnpm/raclette/actions"><img src="https://github.com/mvnpm/raclette/actions/workflows/maven.yml/badge.svg" alt="CI"></a>
   <a href="https://opensource.org/license/apache-2-0"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
   <a href="https://github.com/mvnpm/raclette"><img src="https://img.shields.io/badge/java-21%2B-orange" alt="Java 21+"></a>
 </p>
