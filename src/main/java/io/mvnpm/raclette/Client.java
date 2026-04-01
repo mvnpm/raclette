@@ -46,6 +46,8 @@ public class Client implements AutoCloseable {
             case FILE -> fileChecker.check(uri);
             case HTTP -> websiteChecker.check(uri);
             case MAIL -> Status.excluded("Mail checking not supported");
+            // TEL is always caught by isExcluded() above (lychee client.rs:548),
+            // so this branch is only a safety net.
             case TEL -> Status.excluded("Tel URIs are not checked");
             case UNSUPPORTED -> Status.unsupported(uri.url());
         };

@@ -132,8 +132,9 @@ public class WebsiteChecker {
                 requestBuilder.header(header.getKey(), header.getValue());
             }
 
-            HttpResponse<String> response = httpClient.send(requestBuilder.build(),
-                    HttpResponse.BodyHandlers.ofString());
+            // Discard body — we only need the status code (lychee also uses a limited body handler)
+            HttpResponse<Void> response = httpClient.send(requestBuilder.build(),
+                    HttpResponse.BodyHandlers.discarding());
 
             // Detect redirect exhaustion: java.net.http follows redirects internally
             // and returns the final response. We track via redirect count.

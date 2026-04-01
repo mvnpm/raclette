@@ -48,7 +48,7 @@ public class SrcsetParser {
      * @return [remaining, url] where url may be null, or null on parse error
      */
     private static String[] parseOneUrl(String remaining) {
-        // Skip leading commas and whitespace
+        // Skip leading commas and whitespace (matches lychee srcset.rs:80-84)
         String[] split = splitAt(remaining, c -> c == ',' || Character.isWhitespace(c));
         String start = split[0];
         remaining = split[1];

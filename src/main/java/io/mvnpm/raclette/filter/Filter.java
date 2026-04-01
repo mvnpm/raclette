@@ -72,14 +72,18 @@ public class Filter {
         }
 
         // 3. Check IP exclusion
-        if (excludeLoopbackIps && isLoopbackOrLocalhost(uri)) {
-            return true;
-        }
-        if (excludePrivateIps && uri.isPrivate()) {
-            return true;
-        }
-        if (excludeLinkLocalIps && uri.isLinkLocal()) {
-            return true;
+        // Cache domain once to avoid repeated URI.create() calls
+        if (excludeLoopbackIps || excludePrivateIps || excludeLinkLocalIps) {
+            String domain = uri.domain();
+            if (excludeLoopbackIps && isLoopbackOrLocalhost(domain, uri)) {
+                return true;
+            }
+            if (excludePrivateIps && uri.isPrivate()) {
+                return true;
+            }
+            if (excludeLinkLocalIps && uri.isLinkLocal()) {
+                return true;
+            }
         }
 
         String input = uri.url();
@@ -106,8 +110,7 @@ public class Filter {
         return false;
     }
 
-    private boolean isLoopbackOrLocalhost(Uri uri) {
-        String domain = uri.domain();
+    private boolean isLoopbackOrLocalhost(String domain, Uri uri) {
         if ("localhost".equals(domain)) {
             return true;
         }

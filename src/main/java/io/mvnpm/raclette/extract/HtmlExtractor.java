@@ -135,7 +135,8 @@ public class HtmlExtractor {
                 // Check rel attribute for nofollow, preconnect, dns-prefetch
                 String rel = el.attr("rel");
                 if (!rel.isEmpty()) {
-                    for (String r : rel.split("[,\\s]+")) {
+                    // Simple split on comma + trim (matches lychee html5gum.rs:162-167)
+                    for (String r : rel.split(",")) {
                         String trimmed = r.trim();
                         if (trimmed.equals("nofollow") || trimmed.equals("preconnect")
                                 || trimmed.equals("dns-prefetch")) {

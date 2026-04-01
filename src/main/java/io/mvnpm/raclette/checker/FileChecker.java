@@ -6,7 +6,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import io.mvnpm.raclette.extract.HtmlExtractor;
 import io.mvnpm.raclette.types.ErrorKind;
@@ -25,6 +27,8 @@ public class FileChecker {
     private final List<String> indexFiles;
     private final boolean includeFragments;
     private final HtmlExtractor htmlExtractor;
+    // Cache fragment sets per file to avoid re-parsing (matches lychee's FragmentChecker cache)
+    private final Map<Path, Set<String>> fragmentCache = new ConcurrentHashMap<>();
 
     /**
      * @param fallbackExtensions extensions to try if file not found (e.g. "html")
@@ -154,10 +158,20 @@ public class FileChecker {
             return Status.error(new ErrorKind.InvalidFragment(uri));
         }
 
-        // Read the file and extract fragments
+        // Read the file and extract fragments (cached per file, matches lychee FragmentChecker)
         try {
-            String content = Files.readString(path, StandardCharsets.UTF_8);
-            Set<String> fragments = htmlExtractor.extractFragments(content);
+            Set<String> fragments = fragmentCache.computeIfAbsent(path, p -> {
+                try {
+                    String content = Files.readString(p, StandardCharsets.UTF_8);
+                    return htmlExtractor.extractFragments(content);
+                } catch (IOException e) {
+                    return null;
+                }
+            });
+            if (fragments == null) {
+                // Lychee warns and returns Ok when file can't be read for fragment checking
+                return Status.ok();
+            }
 
             if (fragments.contains(fragment)) {
                 return Status.ok();
@@ -167,7 +181,7 @@ public class FileChecker {
                 return Status.ok();
             }
             return Status.error(new ErrorKind.InvalidFragment(uri));
-        } catch (IOException e) {
+        } catch (Exception e) {
             // Lychee warns and returns Ok when file can't be read for fragment checking
             // (file.rs:297-300). Do not return an error here.
             return Status.ok();

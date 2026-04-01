@@ -98,6 +98,7 @@ public class Quirks {
             URI uri = URI.create(url);
             String path = uri.getPath();
             if (path != null) {
+                // Use the full path as video ID (lychee quirks/mod.rs uses url.path())
                 String id = path.startsWith("/") ? path.substring(1) : path;
                 if (!id.isEmpty()) {
                     return QuirkResult.rewritten("https://img.youtube.com/vi/" + id + "/0.jpg");
