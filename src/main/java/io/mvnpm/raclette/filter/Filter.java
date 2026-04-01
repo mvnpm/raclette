@@ -118,6 +118,11 @@ public class Filter {
     }
 
     private static boolean isFalsePositive(String input) {
+        // Quick string check to skip regex for the vast majority of URLs
+        if (!input.contains("schemas.") && !input.contains("w3.org") && !input.contains("ogp.me")
+                && !input.contains("xmlrpc.php")) {
+            return false;
+        }
         for (Pattern p : FALSE_POSITIVE_PATTERNS) {
             if (p.matcher(input).find()) {
                 return true;

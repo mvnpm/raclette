@@ -21,13 +21,13 @@ class FileCheckerTest {
 
     private Uri fixtureUri(String subpath) {
         Path fullPath = FIXTURES_PATH.resolve(subpath);
-        return new Uri(fullPath.toUri().toString(), Uri.UriKind.FILE);
+        return Uri.file(fullPath.toUri().toString());
     }
 
     private Uri fixtureUriWithFragment(String subpath, String fragment) {
         Path fullPath = FIXTURES_PATH.resolve(subpath);
         String uriStr = fullPath.toUri().toString() + "#" + fragment;
-        return new Uri(uriStr, Uri.UriKind.FILE);
+        return Uri.file(uriStr);
     }
 
     // --- test_default ---

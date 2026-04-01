@@ -225,6 +225,6 @@ public class WebsiteChecker {
      * Close the underlying HTTP client.
      */
     public void close() {
-        // java.net.http.HttpClient doesn't require explicit close in Java 21
+        httpClient.close();
     }
 }

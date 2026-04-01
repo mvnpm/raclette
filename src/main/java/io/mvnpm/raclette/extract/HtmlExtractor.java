@@ -323,7 +323,9 @@ public class HtmlExtractor {
             }
 
             // Also extract bare email addresses (matches lychee's plaintext extractor)
-            extractBareEmails(text, links, startLine, startCol);
+            if (text.contains("@")) {
+                extractBareEmails(text, links, startLine, startCol);
+            }
         }
 
         /**

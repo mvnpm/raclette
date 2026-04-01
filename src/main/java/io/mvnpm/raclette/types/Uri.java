@@ -8,7 +8,7 @@ import java.util.Objects;
  * A parsed URI with its kind.
  * Mirrors lychee's types/uri/valid.rs.
  */
-public record Uri(String url, UriKind kind) implements Comparable<Uri> {
+public final class Uri implements Comparable<Uri> {
 
     public enum UriKind {
         HTTP,
@@ -18,9 +18,22 @@ public record Uri(String url, UriKind kind) implements Comparable<Uri> {
         UNSUPPORTED
     }
 
-    public Uri {
-        Objects.requireNonNull(url, "url must not be null");
-        Objects.requireNonNull(kind, "kind must not be null");
+    private final String url;
+    private final UriKind kind;
+    private final String domain;
+
+    private Uri(String url, UriKind kind) {
+        this.url = Objects.requireNonNull(url, "url must not be null");
+        this.kind = Objects.requireNonNull(kind, "kind must not be null");
+        this.domain = parseDomain(url);
+    }
+
+    public String url() {
+        return url;
+    }
+
+    public UriKind kind() {
+        return kind;
     }
 
     public static Uri tryFrom(String input) {
@@ -65,6 +78,10 @@ public record Uri(String url, UriKind kind) implements Comparable<Uri> {
         return new Uri(url, UriKind.HTTP);
     }
 
+    public static Uri file(String url) {
+        return new Uri(url, UriKind.FILE);
+    }
+
     public static Uri mail(String email) {
         String u = email.startsWith("mailto:") ? email : "mailto:" + email;
         return new Uri(u, UriKind.MAIL);
@@ -79,15 +96,10 @@ public record Uri(String url, UriKind kind) implements Comparable<Uri> {
     }
 
     /**
-     * Extract the host/domain from the URL.
+     * Return the cached host/domain from the URL.
      */
     public String domain() {
-        try {
-            URI uri = URI.create(url);
-            return uri.getHost();
-        } catch (Exception e) {
-            return null;
-        }
+        return domain;
     }
 
     /**
@@ -105,8 +117,7 @@ public record Uri(String url, UriKind kind) implements Comparable<Uri> {
      * Does NOT handle IPv4-mapped IPv6 addresses (same as lychee).
      */
     public boolean isPrivate() {
-        String host = domain();
-        if (host == null || isIpv4MappedIpv6(host)) {
+        if (domain == null || isIpv4MappedIpv6(domain)) {
             return false;
         }
         InetAddress addr = parseIpLiteral();
@@ -119,8 +130,7 @@ public record Uri(String url, UriKind kind) implements Comparable<Uri> {
      * Does NOT handle IPv4-mapped IPv6 addresses (same as lychee).
      */
     public boolean isLinkLocal() {
-        String host = domain();
-        if (host == null || isIpv4MappedIpv6(host)) {
+        if (domain == null || isIpv4MappedIpv6(domain)) {
             return false;
         }
         InetAddress addr = parseIpLiteral();
@@ -132,12 +142,11 @@ public record Uri(String url, UriKind kind) implements Comparable<Uri> {
      * Returns null if the host is a hostname, not an IP literal.
      */
     private InetAddress parseIpLiteral() {
-        String host = domain();
-        if (host == null) {
+        if (domain == null) {
             return null;
         }
         // Strip brackets for IPv6
-        String cleaned = host.startsWith("[") ? host.substring(1, host.length() - 1) : host;
+        String cleaned = domain.startsWith("[") ? domain.substring(1, domain.length() - 1) : domain;
         // Only parse if it looks like an IP literal (starts with digit or colon for IPv6)
         if (cleaned.isEmpty()) {
             return null;
@@ -148,8 +157,7 @@ public record Uri(String url, UriKind kind) implements Comparable<Uri> {
         }
         try {
             // InetAddress.getByName on an IP literal does NOT trigger DNS
-            InetAddress addr = InetAddress.getByName(cleaned);
-            return addr;
+            return InetAddress.getByName(cleaned);
         } catch (Exception e) {
             return null;
         }
@@ -164,9 +172,31 @@ public record Uri(String url, UriKind kind) implements Comparable<Uri> {
         return cleaned.toLowerCase().startsWith("::ffff:");
     }
 
+    private static String parseDomain(String url) {
+        try {
+            return URI.create(url).getHost();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @Override
     public int compareTo(Uri other) {
         return this.url.compareTo(other.url);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (!(o instanceof Uri other))
+            return false;
+        return url.equals(other.url) && kind == other.kind;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(url, kind);
     }
 
     @Override

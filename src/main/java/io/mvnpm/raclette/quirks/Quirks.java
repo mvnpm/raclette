@@ -40,23 +40,26 @@ public class Quirks {
      */
     public QuirkResult apply(String url) {
         // Crates.io: add Accept: text/html
-        if (CRATES_PATTERN.matcher(url).find()) {
+        if (url.contains("crates.io") && CRATES_PATTERN.matcher(url).find()) {
             return QuirkResult.withHeaders(url, Map.of("Accept", "text/html"));
         }
 
         // YouTube standard URLs: rewrite video pages to thumbnail
-        if (YOUTUBE_PATTERN.matcher(url).find()) {
+        if (url.contains("youtube") && YOUTUBE_PATTERN.matcher(url).find()) {
             return applyYoutube(url);
         }
 
         // YouTube short links: rewrite to thumbnail
-        if (YOUTUBE_SHORT_PATTERN.matcher(url).find()) {
+        if (url.contains("youtu") && YOUTUBE_SHORT_PATTERN.matcher(url).find()) {
             return applyYoutubeShort(url);
         }
 
         // GitHub blob markdown with fragment: rewrite to raw.githubusercontent.com
-        Matcher ghMatcher = GITHUB_BLOB_MARKDOWN_FRAGMENT_PATTERN.matcher(url);
-        if (ghMatcher.matches()) {
+        if (url.contains("github.com") && url.contains("/blob/")) {
+            Matcher ghMatcher = GITHUB_BLOB_MARKDOWN_FRAGMENT_PATTERN.matcher(url);
+            if (!ghMatcher.matches()) {
+                return QuirkResult.unchanged(url);
+            }
             String rawUrl = "https://raw.githubusercontent.com/"
                     + ghMatcher.group("user") + "/"
                     + ghMatcher.group("repo") + "/"
