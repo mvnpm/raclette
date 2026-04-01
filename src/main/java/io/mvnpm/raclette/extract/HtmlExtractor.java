@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attribute;
@@ -41,6 +43,10 @@ public class HtmlExtractor {
 
     private static final Set<String> LINK_ATTRIBUTES = Set.of(
             "href", "src", "cite", "usemap");
+
+    // Simple email pattern for bare email detection in plaintext
+    private static final Pattern BARE_EMAIL_PATTERN = Pattern.compile(
+            "[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}");
 
     /**
      * Extract all links from HTML content.
@@ -252,7 +258,7 @@ public class HtmlExtractor {
 
         /**
          * Extract URLs from plain text (for verbatim blocks when includeVerbatim is true).
-         * Simple pattern: find http://, https://, ftp:// URLs.
+         * Finds http://, https://, and mailto: URIs.
          * Calculates line/column offsets relative to the text node's start position.
          */
         private static void extractPlainTextUrls(String text, List<RawUri> links, int startLine, int startCol) {
@@ -265,16 +271,22 @@ public class HtmlExtractor {
             while (i < text.length()) {
                 int httpIdx = text.indexOf("http://", i);
                 int httpsIdx = text.indexOf("https://", i);
+                int mailtoIdx = text.indexOf("mailto:", i);
 
-                int startIdx;
-                if (httpIdx < 0 && httpsIdx < 0) {
-                    break;
-                } else if (httpIdx < 0) {
-                    startIdx = httpsIdx;
-                } else if (httpsIdx < 0) {
+                // Find the earliest match
+                int startIdx = -1;
+                if (httpIdx >= 0) {
                     startIdx = httpIdx;
-                } else {
-                    startIdx = Math.min(httpIdx, httpsIdx);
+                }
+                if (httpsIdx >= 0 && (startIdx < 0 || httpsIdx < startIdx)) {
+                    startIdx = httpsIdx;
+                }
+                if (mailtoIdx >= 0 && (startIdx < 0 || mailtoIdx < startIdx)) {
+                    startIdx = mailtoIdx;
+                }
+
+                if (startIdx < 0) {
+                    break;
                 }
 
                 // Update line/col tracking from lastTrackedPos to startIdx
@@ -299,8 +311,36 @@ public class HtmlExtractor {
                 }
 
                 String url = text.substring(startIdx, endIdx);
+                // For mailto: URIs in plaintext, strip query params (matches lychee's linkify behavior)
+                if (url.startsWith("mailto:")) {
+                    int qmark = url.indexOf('?');
+                    if (qmark > 0) {
+                        url = url.substring(0, qmark);
+                    }
+                }
                 links.add(RawUri.ofText(url, currentLine, currentCol));
                 i = endIdx;
+            }
+
+            // Also extract bare email addresses (matches lychee's plaintext extractor)
+            extractBareEmails(text, links, startLine, startCol);
+        }
+
+        /**
+         * Extract bare email addresses from text and add as mailto: URIs.
+         * Skips emails that are already part of a mailto: URI (already captured above).
+         */
+        private static void extractBareEmails(String text, List<RawUri> links, int startLine,
+                int startCol) {
+            Matcher matcher = BARE_EMAIL_PATTERN.matcher(text);
+            while (matcher.find()) {
+                int pos = matcher.start();
+                // Skip if preceded by "mailto:" — already captured
+                if (pos >= 7 && text.substring(pos - 7, pos).equals("mailto:")) {
+                    continue;
+                }
+                String email = matcher.group();
+                links.add(RawUri.ofText("mailto:" + email, startLine, startCol));
             }
         }
     }
