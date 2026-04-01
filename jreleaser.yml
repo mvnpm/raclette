@@ -1,0 +1,19 @@
+project:
+  name: raclette
+  description: Java link checker library, equivalent to lychee
+  longDescription: |
+    Raclette is a Java link checker library inspired by lychee.
+    It extracts and validates links from HTML content.
+  authors:
+    - Andy Damevin
+  license: Apache-2.0
+  links:
+    homepage: https://github.com/mvnpm/raclette
+  java:
+    groupId: io.mvnpm
+    version: 21
+  inceptionYear: 2025
+
+release:
+  github:
+    owner: mvnpm
