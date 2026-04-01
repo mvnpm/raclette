@@ -10,7 +10,7 @@ layout: docs
 <dependency>
     <groupId>io.mvnpm</groupId>
     <artifactId>raclette</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.0.CR1</version>
 </dependency>
 ```
 
