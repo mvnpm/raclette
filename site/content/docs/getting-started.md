@@ -19,6 +19,9 @@ layout: docs
 The simplest way to use Raclette — check one link:
 
 ```java
+import io.mvnpm.raclette.Raclette;
+import io.mvnpm.raclette.types.Status;
+
 try (Raclette raclette = Raclette.builder().build()) {
     Status status = raclette.check("https://example.com");
     if (status.isSuccess()) {
@@ -51,6 +54,12 @@ All options set on the builder apply to every link check. See [Configuration](..
 For checking all links in an HTML document, use the `Collector` to extract links, then check each one:
 
 ```java
+import io.mvnpm.raclette.Raclette;
+import io.mvnpm.raclette.collector.Collector;
+import io.mvnpm.raclette.collector.Input;
+import io.mvnpm.raclette.types.Status;
+import io.mvnpm.raclette.types.Uri;
+
 String html = """
     <html>
         <a href="https://github.com">GitHub</a>

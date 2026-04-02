@@ -9,6 +9,9 @@ layout: docs
 Raclette uses a fluent builder pattern for configuration. All options set on the builder apply to every link check.
 
 ```java
+import io.mvnpm.raclette.Raclette;
+import io.mvnpm.raclette.ratelimit.RateLimitConfig;
+
 Raclette raclette = Raclette.builder()
     .maxRetries(3)
     .timeout(Duration.ofSeconds(10))

@@ -9,6 +9,10 @@ layout: docs
 The `Collector` extracts links from four input types:
 
 ```java
+import io.mvnpm.raclette.collector.Collector;
+import io.mvnpm.raclette.collector.Input;
+import io.mvnpm.raclette.types.Uri;
+
 Set<Uri> links = Collector.builder()
     .build()
     .collectLinks(Set.of(
