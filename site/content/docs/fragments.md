@@ -6,7 +6,7 @@ layout: docs
 
 ## What Are Fragments?
 
-A fragment is the `#section` part of a URL like `page.html#section`. It points to a specific element in the target page — an element with a matching `id` or `name` attribute.
+A fragment is the `#section` part of a URL like `page.html#section`. It points to a specific element in the target page, one with a matching `id` or `name` attribute.
 
 By default, Raclette only checks that the target file or URL exists. Fragment checking goes further and verifies that the anchor target actually exists in the page.
 
@@ -31,7 +31,7 @@ Fragment sets are cached per file, so checking multiple anchors in the same file
 
 ## GitHub Compatibility
 
-GitHub prefixes heading anchors with `user-content-`. Raclette handles this automatically — a fragment `#installation` will match both `id="installation"` and `id="user-content-installation"`.
+GitHub prefixes heading anchors with `user-content-`. Raclette handles this automatically, so a fragment `#installation` will match both `id="installation"` and `id="user-content-installation"`.
 
 ## Directory and File Resolution
 

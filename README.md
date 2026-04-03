@@ -22,21 +22,22 @@
 
 ## What is Raclette?
 
-Raclette is a lightweight link checker library for the JVM — the Java equivalent of [lychee](https://github.com/lycheeverse/lychee).
+Raclette is a lightweight link checker library for the JVM, the Java equivalent of [lychee](https://github.com/lycheeverse/lychee).
 
 Drop it into any Java project as a Maven dependency. No external binaries, no native installs. Built on Java 21 virtual threads for high-throughput concurrent checking without callback complexity.
 
 ## Features
 
-- **Virtual threads** — lightweight, massive concurrency out of the box
-- **HTML extraction** — thorough link extraction via [JSoup](https://jsoup.org/) (anchors, images, srcsets, and more)
-- **Per-host rate limiting** — respect target servers with configurable intervals and concurrency limits
-- **Quirks system** — handle site-specific behaviors (YouTube, crates.io, GitHub)
-- **Flexible filtering** — include/exclude patterns, IP filtering, false positive detection
-- **File and website checking** — check local files, directories, globs, or remote URLs
-- **Fragment checking** — verify `#fragment` links point to real anchors
-- **Retry with backoff** — automatic retry with exponential backoff for transient failures
-- **Configurable** — custom headers, user agent, timeouts, redirects, HTTPS enforcement
+- **Virtual threads** for lightweight, massive concurrency out of the box
+- **HTML extraction** with thorough link extraction via [JSoup](https://jsoup.org/) (anchors, images, srcsets, and more)
+- **Per-host rate limiting** to respect target servers with configurable intervals and concurrency limits
+- **Quirks system** to handle site-specific behaviors (YouTube, crates.io, GitHub)
+- **Flexible filtering** with include/exclude patterns, IP filtering, false positive detection
+- **File and website checking** for local files, directories, globs, or remote URLs
+- **Static site support** with a one-liner for generated sites (Hugo, Jekyll, Roq) including localhost rewriting and base path stripping
+- **Fragment checking** to verify `#fragment` links point to real anchors
+- **Retry with backoff** using automatic exponential backoff for transient failures
+- **Configurable** with custom headers, user agent, timeouts, redirects, HTTPS enforcement
 
 ## Quick Start
 
@@ -95,6 +96,24 @@ try (Raclette raclette = Raclette.builder().build()) {
 }
 ```
 
+### Check a static site (SSG)
+
+For generated static sites (Hugo, Jekyll, Roq, etc.), `StaticSiteChecker` handles localhost URL rewriting, base path stripping, and parallel execution:
+
+```java
+// Zero-config
+Map<Uri, Status> broken = StaticSiteChecker.check(Path.of("target/site"));
+
+// With options
+Map<Uri, Status> broken = StaticSiteChecker.builder()
+    .path(Path.of("target/site"))
+    .basePath("/my-project/")
+    .checkRemoteLinks(true)
+    .includeFragments(true)
+    .build()
+    .check();
+```
+
 ## Configuration
 
 ```java
@@ -142,22 +161,22 @@ Set.of(
 
 ```
 io.mvnpm.raclette
-├── collector/    — Collect links from files, URLs, strings, globs
-├── extract/      — HTML link extraction (JSoup) and srcset parsing
-├── filter/       — Include/exclude patterns, IP filtering, false positives
-├── checker/      — Website (HTTP) and file checking
-├── quirks/       — Site-specific URL rewriting (YouTube, crates.io, GitHub)
-├── ratelimit/    — Per-host rate limiting with virtual-thread-friendly semaphores
-└── types/        — Uri, Status, ErrorKind, RawUri
+├── collector/    Collect links from files, URLs, strings, globs
+├── extract/      HTML link extraction (JSoup) and srcset parsing
+├── filter/       Include/exclude patterns, IP filtering, false positives
+├── checker/      Website (HTTP) and file checking
+├── quirks/       Site-specific URL rewriting (YouTube, crates.io, GitHub)
+├── ratelimit/    Per-host rate limiting with virtual-thread-friendly semaphores
+└── types/        Uri, Status, ErrorKind, RawUri
 ```
 
 ## Inspired by lychee
 
-Raclette is heavily inspired by [lychee](https://github.com/lycheeverse/lychee), the excellent link checker written in Rust. We follow lychee's design philosophy — its filtering logic, quirks system, and overall architecture — and bring it to the JVM.
+Raclette is heavily inspired by [lychee](https://github.com/lycheeverse/lychee), the excellent link checker written in Rust. We follow lychee's design philosophy (filtering logic, quirks system, and overall architecture) and bring it to the JVM.
 
 ## Trivia
 
-Raclette is named after the Swiss cheese dish — a nod to the original lychee link checker. Where lychee is a fruit, raclette is melted cheese: warm, comforting, and makes everything better. Also, it *grates* through your links.
+Raclette is named after the Swiss cheese dish, a nod to the original lychee link checker. Where lychee is a fruit, raclette is melted cheese: warm, comforting, and makes everything better. Also, it *grates* through your links.
 
 ## License
 
@@ -165,4 +184,4 @@ Raclette is named after the Swiss cheese dish — a nod to the original lychee l
 
 ## Credits
 
-Built by [Andy Damevin](https://github.com/ia3andy) — part of the [mvnpm](https://github.com/mvnpm) ecosystem.
+Built by [Andy Damevin](https://github.com/ia3andy), part of the [mvnpm](https://github.com/mvnpm) ecosystem.

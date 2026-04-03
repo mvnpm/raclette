@@ -1,4 +1,4 @@
-# Raclette — Java Link Checker
+# Raclette, a Java Link Checker
 
 ## Project Overview
 

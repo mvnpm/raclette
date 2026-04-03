@@ -1,6 +1,6 @@
 ---
 title: Raclette
-description: A fast, lightweight Java link checker — the JVM equivalent of lychee
+description: A fast, lightweight Java link checker for the JVM, the equivalent of lychee
 layout: home
 ---
 
@@ -46,7 +46,7 @@ layout: home
         <h3 class="text-lg font-semibold text-surface-100">HTML Extraction</h3>
       </div>
       <p class="text-surface-400">
-        Extracts links from HTML using JSoup — anchors, images, scripts, srcsets, and more. Perfect for documentation and static sites.
+        Extracts links from HTML using JSoup: anchors, images, scripts, srcsets, and more. Perfect for documentation and static sites.
       </p>
     </div>
 
@@ -70,13 +70,23 @@ layout: home
       </p>
     </div>
 
+    <div class="bg-surface-800 border border-surface-700 rounded-xl p-6 hover:border-accent/40 transition-colors">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-accent text-2xl">🌐</span>
+        <h3 class="text-lg font-semibold text-surface-100">Static Site Support</h3>
+      </div>
+      <p class="text-surface-400">
+        One-liner for generated sites (Hugo, Jekyll, Roq) with localhost rewriting, base path stripping, and parallel execution.
+      </p>
+    </div>
+
     <div class="md:col-span-2 bg-surface-800 border border-accent/20 rounded-xl p-6">
       <div class="flex items-center gap-3 mb-3">
         <span class="text-accent text-2xl">🍒</span>
         <h3 class="text-lg font-semibold text-surface-100">Inspired by lychee</h3>
       </div>
       <p class="text-surface-400">
-        Raclette is heavily inspired by <a href="https://github.com/lycheeverse/lychee" class="text-accent hover:text-accent-light underline underline-offset-2">lychee</a>, the excellent async link checker written in Rust. We follow lychee's design philosophy — its filtering, quirks system, and overall architecture — and bring it to the JVM.
+        Raclette is heavily inspired by <a href="https://github.com/lycheeverse/lychee" class="text-accent hover:text-accent-light underline underline-offset-2">lychee</a>, the excellent async link checker written in Rust. We follow lychee's design philosophy (filtering, quirks system, and overall architecture) and bring it to the JVM.
       </p>
     </div>
 
@@ -89,7 +99,7 @@ layout: home
     <h2 class="text-3xl font-bold text-surface-100 mb-8">What is Raclette?</h2>
     <div class="space-y-4 text-surface-300 leading-relaxed">
       <p>
-        Raclette is a fast, lightweight link checker for the JVM — the Java equivalent of
+        Raclette is a fast, lightweight link checker for the JVM, the Java equivalent of
         <a href="https://github.com/lycheeverse/lychee" class="text-accent hover:text-accent-light underline underline-offset-2">lychee</a>.
         It finds broken hyperlinks and mail addresses in your HTML files and websites.
       </p>
@@ -103,27 +113,31 @@ layout: home
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="flex gap-3">
         <span class="text-accent mt-1">&#10003;</span>
-        <span class="text-surface-300"><strong class="text-surface-100">JVM-native</strong> — no shelling out to external tools</span>
+        <span class="text-surface-300"><strong class="text-surface-100">JVM-native</strong> with no shelling out to external tools</span>
       </div>
       <div class="flex gap-3">
         <span class="text-accent mt-1">&#10003;</span>
-        <span class="text-surface-300"><strong class="text-surface-100">Virtual threads</strong> — lightweight, massive concurrency</span>
+        <span class="text-surface-300"><strong class="text-surface-100">Virtual threads</strong> for lightweight, massive concurrency</span>
       </div>
       <div class="flex gap-3">
         <span class="text-accent mt-1">&#10003;</span>
-        <span class="text-surface-300"><strong class="text-surface-100">Rate limiting</strong> — respect target servers</span>
+        <span class="text-surface-300"><strong class="text-surface-100">Rate limiting</strong> to respect target servers</span>
       </div>
       <div class="flex gap-3">
         <span class="text-accent mt-1">&#10003;</span>
-        <span class="text-surface-300"><strong class="text-surface-100">Quirks system</strong> — handle site-specific behaviors</span>
+        <span class="text-surface-300"><strong class="text-surface-100">Quirks system</strong> to handle site-specific behaviors</span>
       </div>
       <div class="flex gap-3">
         <span class="text-accent mt-1">&#10003;</span>
-        <span class="text-surface-300"><strong class="text-surface-100">HTML parsing</strong> — thorough link extraction via JSoup</span>
+        <span class="text-surface-300"><strong class="text-surface-100">HTML parsing</strong> with thorough link extraction via JSoup</span>
       </div>
       <div class="flex gap-3">
         <span class="text-accent mt-1">&#10003;</span>
-        <span class="text-surface-300"><strong class="text-surface-100">Open source</strong> — Apache 2.0 licensed</span>
+        <span class="text-surface-300"><strong class="text-surface-100">SSG support</strong> with one-liner for Hugo, Jekyll, Roq sites</span>
+      </div>
+      <div class="flex gap-3">
+        <span class="text-accent mt-1">&#10003;</span>
+        <span class="text-surface-300"><strong class="text-surface-100">Open source</strong>, Apache 2.0 licensed</span>
       </div>
     </div>
   </div>
@@ -157,6 +171,23 @@ layout: home
   </div>
 </section>
 
+<!-- Dogfood -->
+<section class="border-t border-surface-700">
+  <div class="max-w-4xl mx-auto px-6 py-20">
+    <h2 class="text-3xl font-bold text-surface-100 mb-8">Eating Our Own Cheese</h2>
+    <div class="space-y-4 text-surface-300 leading-relaxed">
+      <p>
+        This site is checked by Raclette itself. The link below is deliberately broken, and
+        <a href="https://github.com/mvnpm/raclette/blob/main/src/test/java/io/mvnpm/raclette/checker/StaticSiteCheckerTest.java" class="text-accent hover:text-accent-light underline underline-offset-2">our dogfood test</a>
+        verifies that Raclette catches it.
+      </p>
+      <p>
+        <a href="this-page-does-not-exist" class="text-red-400 line-through">A deliberately broken link</a>
+      </p>
+    </div>
+  </div>
+</section>
+
 <!-- Trivia -->
 <section class="border-t border-surface-700">
   <div class="max-w-4xl mx-auto px-6 py-20">
@@ -164,7 +195,7 @@ layout: home
     <div class="space-y-4 text-surface-300 leading-relaxed">
       <h3 class="text-xl font-semibold text-surface-100">Project Name</h3>
       <p>
-        Raclette is named after the 450-year-old cheese dish, claimed by both Switzerland and France — a nod to the original
+        Raclette is named after the 450-year-old cheese dish, claimed by both Switzerland and France, a nod to the original
         <a href="https://github.com/lycheeverse/lychee" class="text-accent hover:text-accent-light underline underline-offset-2">lychee</a>
         link checker. Where lychee is a fruit, raclette is melted cheese:
         warm, comforting, and makes everything better. Also, it <em>grates</em> through your links.

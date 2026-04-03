@@ -23,14 +23,14 @@ Raclette (facade)
 
 When you call `raclette.check(uri)`:
 
-1. **Filter** — the URI is checked against exclude/include patterns, IP rules, and false positive detection. Excluded URIs return immediately with an `Excluded` status.
+1. **Filter**: the URI is checked against exclude/include patterns, IP rules, and false positive detection. Excluded URIs return immediately with an `Excluded` status.
 
-2. **Route** — the URI is dispatched based on its scheme:
+2. **Route**: the URI is dispatched based on its scheme:
    - `file://` goes to the FileChecker
    - `http://` and `https://` go through rate limiting, then to the WebsiteChecker
    - `mailto:` and `tel:` are handled by the filter
 
-3. **Check** — the appropriate checker validates the URI and returns a `Status`.
+3. **Check**: the appropriate checker validates the URI and returns a `Status`.
 
 ## FileChecker
 
@@ -44,20 +44,20 @@ The FileChecker resolves local file paths and optionally validates fragments:
 
 The WebsiteChecker handles HTTP requests with:
 
-- **Quirks** — site-specific URL rewrites applied before the request (YouTube, crates.io, GitHub)
-- **Retries** — exponential backoff for transient failures (configurable)
-- **Redirect following** — up to a configurable maximum
-- **HTTPS enforcement** — optionally checks if HTTP links can be upgraded
-- **Custom headers** — applied to every request
+- **Quirks**: site-specific URL rewrites applied before the request (YouTube, crates.io, GitHub)
+- **Retries**: exponential backoff for transient failures (configurable)
+- **Redirect following**: up to a configurable maximum
+- **HTTPS enforcement**: optionally checks if HTTP links can be upgraded
+- **Custom headers**: applied to every request
 
 ## Rate Limiting
 
 HTTP requests go through the `HostPool`, which enforces per-host limits:
 
-- **Concurrency semaphore** — limits in-flight requests per host
-- **Rate limit semaphore** — enforces a minimum interval between requests, refilled by a timer
+- **Concurrency semaphore**: limits in-flight requests per host
+- **Rate limit semaphore**: enforces a minimum interval between requests, refilled by a timer
 
-Both semaphores use `Semaphore.acquire()`, which is virtual-thread-friendly — no `Thread.sleep()` or `synchronized` blocks.
+Both semaphores use `Semaphore.acquire()`, which is virtual-thread-friendly and avoids `Thread.sleep()` or `synchronized` blocks.
 
 ## Virtual Threads
 
@@ -71,6 +71,6 @@ The `HtmlExtractor` uses JSoup to parse HTML and extract URIs from elements like
 
 Some websites need special handling to avoid false positives. The quirks system rewrites URLs before checking:
 
-- **YouTube** — rewrites video pages to thumbnail URLs
-- **crates.io** — adds `Accept: text/html` header
-- **GitHub** — rewrites markdown URLs for fragment checking
+- **YouTube**: rewrites video pages to thumbnail URLs
+- **crates.io**: adds `Accept: text/html` header
+- **GitHub**: rewrites markdown URLs for fragment checking

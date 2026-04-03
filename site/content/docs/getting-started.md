@@ -16,7 +16,7 @@ layout: docs
 
 ## Check a single URL
 
-The simplest way to use Raclette — check one link:
+The simplest way to use Raclette - check one link:
 
 ```java
 import io.mvnpm.raclette.Raclette;
@@ -47,7 +47,7 @@ try (Raclette raclette = Raclette.builder()
 }
 ```
 
-All options set on the builder apply to every link check. See [Configuration](../configuration) for the full list.
+All options set on the builder apply to every link check. See [Configuration](/docs/configuration) for the full list.
 
 ## Collect and check links from HTML
 
@@ -82,7 +82,7 @@ try (Raclette raclette = Raclette.builder().build()) {
 
 ## Check a local directory
 
-Check all HTML files in a directory — perfect for generated sites:
+Check all HTML files in a directory - perfect for generated sites:
 
 ```java
 Set<Uri> links = Collector.builder()
@@ -97,8 +97,33 @@ try (Raclette raclette = Raclette.builder().build()) {
 }
 ```
 
+## Check a static site (SSG)
+
+For generated static sites (Hugo, Jekyll, Roq, etc.), use `StaticSiteChecker` - it handles localhost URL rewriting, base path stripping, and parallel execution:
+
+```java
+import io.mvnpm.raclette.checker.StaticSiteChecker;
+import io.mvnpm.raclette.types.Status;
+import io.mvnpm.raclette.types.Uri;
+
+// Zero-config: check all links in a generated site
+Map<Uri, Status> broken = StaticSiteChecker.check(Path.of("target/site"));
+
+// With options: base path, remote link checking, etc.
+Map<Uri, Status> broken = StaticSiteChecker.builder()
+    .path(Path.of("target/site"))
+    .basePath("/my-project/")
+    .checkRemoteLinks(true)
+    .includeFragments(true)
+    .build()
+    .check();
+
+broken.forEach((uri, status) ->
+    System.out.println("Broken: " + uri + " -> " + status));
+```
+
 ## Next steps
 
-- [Configuration](../configuration) — all builder options
-- [Collecting Links](../collecting-links) — input sources and base URL resolution
-- [Excluding Links](../excluding-links) — filtering patterns
+- [Configuration](../configuration) - all builder options
+- [Collecting Links](../collecting-links) - input sources and base URL resolution
+- [Excluding Links](../excluding-links) - filtering patterns

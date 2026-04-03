@@ -16,7 +16,7 @@ Raclette raclette = Raclette.builder()
 
 ## Include Patterns
 
-Only check links matching a regex — everything else is excluded:
+Only check links matching a regex (everything else is excluded):
 
 ```java
 Raclette raclette = Raclette.builder()
@@ -46,7 +46,7 @@ Raclette raclette = Raclette.builder()
     .build();
 ```
 
-IP filtering only applies to URLs with literal IP addresses — hostnames are not resolved.
+IP filtering only applies to URLs with literal IP addresses. Hostnames are not resolved.
 
 ## Mail and Tel Links
 
@@ -76,8 +76,8 @@ Filters are applied in this order:
 
 1. Mail/tel scheme check
 2. IP address checks (loopback, private, link-local)
-3. Include patterns — if set and matching, the URL is **included** regardless of other rules
+3. Include patterns: if set and matching, the URL is **included** regardless of other rules
 4. False positive detection
 5. Exclude patterns
 
-When include patterns are set but a URL doesn't match any of them, it is excluded — even if no exclude patterns are configured.
+When include patterns are set but a URL doesn't match any of them, it is excluded even if no exclude patterns are configured.

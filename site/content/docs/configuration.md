@@ -44,8 +44,8 @@ Raclette raclette = Raclette.builder()
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `includes` | none | Regex patterns — only matching URLs are checked |
-| `excludes` | none | Regex patterns — matching URLs are excluded |
+| `includes` | none | Regex patterns; only matching URLs are checked |
+| `excludes` | none | Regex patterns; matching URLs are excluded |
 | `includeMail` | false | Include `mailto:` links (excluded by default) |
 | `excludeAllPrivate` | false | Exclude loopback, private, and link-local IPs |
 | `excludeLoopbackIps` | false | Exclude loopback addresses (127.0.0.1, ::1) |
@@ -84,7 +84,7 @@ Raclette retries failed requests with exponential backoff. The wait time doubles
 - Attempt 3: wait 2s
 - Attempt 4: wait 4s
 
-Only retryable errors trigger retries — permanent failures like 404 are returned immediately.
+Only retryable errors trigger retries. Permanent failures like 404 are returned immediately.
 
 ## HTTPS Enforcement
 
