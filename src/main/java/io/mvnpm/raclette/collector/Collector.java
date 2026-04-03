@@ -22,6 +22,7 @@ import java.util.Set;
 import io.mvnpm.raclette.extract.Extractor;
 import io.mvnpm.raclette.types.RawUri;
 import io.mvnpm.raclette.types.Uri;
+import io.mvnpm.raclette.types.UrlUtils;
 
 /**
  * Collects links from various input sources (files, globs, remote URLs, strings).
@@ -32,14 +33,16 @@ import io.mvnpm.raclette.types.Uri;
 public class Collector implements AutoCloseable {
 
     private final String base;
+    private final boolean allowAboveBase;
     private final boolean includeVerbatim;
     private final String userAgent;
     private final boolean skipHidden;
     private final HttpClient httpClient;
     private final Extractor extractor;
 
-    private Collector(String base, boolean includeVerbatim, String userAgent, boolean skipHidden) {
+    private Collector(String base, boolean allowAboveBase, boolean includeVerbatim, String userAgent, boolean skipHidden) {
         this.base = base;
+        this.allowAboveBase = allowAboveBase;
         this.includeVerbatim = includeVerbatim;
         this.userAgent = userAgent;
         this.skipHidden = skipHidden;
@@ -77,17 +80,8 @@ public class Collector implements AutoCloseable {
     private Set<Uri> collectFromString(String content, String resolveBase) {
         List<RawUri> rawUris = extractor.extractHtmlRaw(content);
         Set<Uri> uris = new HashSet<>();
-        // Pre-compute base URI once for all links on this page
-        URI baseUri = null;
-        if (resolveBase != null && !resolveBase.isBlank()) {
-            try {
-                baseUri = toBaseUri(resolveBase);
-            } catch (Exception e) {
-                // Invalid base — relative links won't resolve
-            }
-        }
         for (RawUri raw : rawUris) {
-            Uri uri = resolveUri(raw.text(), baseUri);
+            Uri uri = resolveUri(raw.text(), resolveBase);
             if (uri != null) {
                 uris.add(uri);
             }
@@ -210,10 +204,10 @@ public class Collector implements AutoCloseable {
     }
 
     /**
-     * Resolve a raw URI string against a pre-parsed base URI.
-     * Matches lychee's BaseInfo.parse_url_text / resolve_relative_link logic.
+     * Resolve a raw link text against a base string.
+     * File bases use Path.resolve() directly; HTTP bases use URI.resolve().
      */
-    private Uri resolveUri(String text, URI baseUri) {
+    private Uri resolveUri(String text, String resolveBase) {
         if (text == null || text.isBlank()) {
             return null;
         }
@@ -223,17 +217,47 @@ public class Collector implements AutoCloseable {
             return Uri.tryFrom(text);
         }
 
-        // Relative URI — need a base to resolve
-        if (baseUri == null) {
+        // Relative link with no base
+        if (resolveBase == null || resolveBase.isBlank()) {
             return null;
         }
 
         try {
-            URI resolved = resolveRelative(baseUri, text);
-            return Uri.tryFrom(normalizeFileUri(resolved.toString()));
+            String resolved;
+            if (resolveBase.startsWith("file:") || !resolveBase.contains("://")) {
+                resolved = resolveFileRelative(resolveBase, text);
+            } else {
+                resolved = resolveRelative(toBaseUri(resolveBase), text).toString();
+            }
+            resolved = UrlUtils.normalizeFileUrl(resolved);
+            if (base != null && base.startsWith("file:") && !allowAboveBase && resolved.startsWith("file:")) {
+                resolved = clampFileUrl(resolved, base);
+            }
+            return Uri.tryFrom(resolved);
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * Resolve a relative link against a file base using Path operations.
+     * No URI objects needed.
+     */
+    static String resolveFileRelative(String fileBase, String relative) {
+        String dir = fileBase.startsWith("file:") ? UrlUtils.fileUrlToPath(fileBase) : fileBase;
+        if (!dir.startsWith("/")) {
+            dir = "/" + dir;
+        }
+        if (!dir.endsWith("/")) {
+            // file: URI without trailing / points to a file, use its parent.
+            // Bare path without trailing / is treated as a directory.
+            dir = fileBase.startsWith("file:") ? UrlUtils.parentDir(dir) : dir + "/";
+            if (dir == null)
+                return null;
+        }
+        // Root-relative: strip leading / so it resolves against the base, not filesystem root
+        String path = relative.startsWith("/") ? relative.substring(1) : relative;
+        return UrlUtils.pathToFileUrl(Path.of(dir + path).normalize().toString());
     }
 
     /**
@@ -253,7 +277,7 @@ public class Collector implements AutoCloseable {
         if (!filePath.endsWith("/")) {
             filePath += "/";
         }
-        return URI.create("file://" + filePath);
+        return URI.create(UrlUtils.pathToFileUrl(filePath));
     }
 
     /**
@@ -268,10 +292,8 @@ public class Collector implements AutoCloseable {
         URI effectiveBase = baseUri;
 
         if (basePath != null && !basePath.endsWith("/") && !relative.startsWith("/")) {
-            // For locally-relative links, we need the "directory" of the base
-            int lastSlash = basePath.lastIndexOf('/');
-            if (lastSlash >= 0) {
-                String dirPath = basePath.substring(0, lastSlash + 1);
+            String dirPath = UrlUtils.parentDir(basePath);
+            if (dirPath != null) {
                 try {
                     effectiveBase = new URI(baseUri.getScheme(), baseUri.getAuthority(),
                             dirPath, null, null);
@@ -296,13 +318,37 @@ public class Collector implements AutoCloseable {
     }
 
     /**
-     * Normalize file:/ URIs to file:/// form.
+     * Clamp a file URL string within a root directory, preserving query and fragment.
      */
-    private static String normalizeFileUri(String uri) {
-        if (uri.startsWith("file:/") && !uri.startsWith("file:///")) {
-            return "file:///" + uri.substring("file:/".length());
+    static String clampFileUrl(String url, String base) {
+        String stripped = UrlUtils.stripQueryAndFragment(url);
+        String suffix = url.substring(stripped.length());
+
+        String pathStr = UrlUtils.fileUrlToPath(stripped);
+        String rootStr = UrlUtils.fileUrlToPath(base);
+        Path safe = resolveWithinRoot(Path.of(pathStr).normalize(), Path.of(rootStr).normalize());
+        return UrlUtils.pathToFileUrl(safe.toString()) + suffix;
+    }
+
+    /**
+     * Resolve a path within a root directory, like a web server document root.
+     * If the path escapes the root via ../, the non-.. suffix is resolved back within root.
+     */
+    static Path resolveWithinRoot(Path filePath, Path root) {
+        if (filePath.startsWith(root)) {
+            return filePath;
         }
-        return uri;
+        Path relative = root.relativize(filePath);
+        for (int i = 0; i < relative.getNameCount(); i++) {
+            if (!relative.getName(i).toString().equals("..")) {
+                Path safe = root.resolve(relative.subpath(i, relative.getNameCount())).normalize();
+                if (safe.startsWith(root)) {
+                    return safe;
+                }
+                break;
+            }
+        }
+        return root;
     }
 
     /**
@@ -377,12 +423,22 @@ public class Collector implements AutoCloseable {
     public static class CollectorBuilder {
 
         private String base;
+        private boolean allowAboveBase = false;
         private boolean includeVerbatim = false;
         private String userAgent = "raclette/0.1";
         private boolean skipHidden = true;
 
         public CollectorBuilder base(String base) {
             this.base = base;
+            return this;
+        }
+
+        /**
+         * When false (default), file URIs that escape the base directory via ../
+         * are clamped back within the base, like a web server document root.
+         */
+        public CollectorBuilder allowAboveBase(boolean allowAboveBase) {
+            this.allowAboveBase = allowAboveBase;
             return this;
         }
 
@@ -402,7 +458,7 @@ public class Collector implements AutoCloseable {
         }
 
         public Collector build() {
-            return new Collector(base, includeVerbatim, userAgent, skipHidden);
+            return new Collector(base, allowAboveBase, includeVerbatim, userAgent, skipHidden);
         }
     }
 }

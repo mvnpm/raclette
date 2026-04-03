@@ -19,6 +19,7 @@ import io.mvnpm.raclette.ratelimit.RateLimitConfig;
 import io.mvnpm.raclette.types.ErrorKind;
 import io.mvnpm.raclette.types.Status;
 import io.mvnpm.raclette.types.Uri;
+import io.mvnpm.raclette.types.UrlUtils;
 
 /**
  * High-level API for checking links in a generated static site directory.
@@ -174,25 +175,16 @@ public class StaticSiteChecker implements AutoCloseable {
         String rest = url.substring(m.end());
 
         // Separate fragment
-        String fragment = null;
-        int hashIdx = rest.indexOf('#');
-        if (hashIdx >= 0) {
-            fragment = rest.substring(hashIdx);
-            rest = rest.substring(0, hashIdx);
-        }
+        String[] parts = UrlUtils.splitFragment(rest);
+        rest = parts[0];
+        String fragment = parts[1] != null ? "#" + parts[1] : null;
 
         // Strip query string
-        int queryIdx = rest.indexOf('?');
-        if (queryIdx >= 0) {
-            rest = rest.substring(0, queryIdx);
-        }
+        rest = UrlUtils.stripQueryAndFragment(rest);
 
         // Strip basePath prefix
         if (basePath != null && !basePath.equals("/")) {
-            String prefix = basePath.startsWith("/") ? basePath : "/" + basePath;
-            if (!prefix.endsWith("/")) {
-                prefix += "/";
-            }
+            String prefix = UrlUtils.normalizePathPrefix(basePath);
             if (rest.startsWith(prefix)) {
                 rest = "/" + rest.substring(prefix.length());
             }
@@ -223,10 +215,8 @@ public class StaticSiteChecker implements AutoCloseable {
         }
 
         String rest = url.substring(siteRootUri.length());
-        String prefix = basePath.startsWith("/") ? basePath.substring(1) : basePath;
-        if (!prefix.endsWith("/")) {
-            prefix += "/";
-        }
+        // normalizePathPrefix adds leading /, strip it since rest is relative to siteRootUri
+        String prefix = UrlUtils.normalizePathPrefix(basePath).substring(1);
 
         if (rest.startsWith(prefix)) {
             String stripped = siteRootUri + rest.substring(prefix.length());

@@ -1,7 +1,6 @@
 package io.mvnpm.raclette.checker;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,6 +13,7 @@ import io.mvnpm.raclette.extract.HtmlExtractor;
 import io.mvnpm.raclette.types.ErrorKind;
 import io.mvnpm.raclette.types.Status;
 import io.mvnpm.raclette.types.Uri;
+import io.mvnpm.raclette.types.UrlUtils;
 
 /**
  * Checks local file URIs for existence and validity.
@@ -146,7 +146,7 @@ public class FileChecker {
      * Check if a fragment exists in the resolved file.
      */
     private Status checkFragment(Path path, Uri uri) {
-        String fragment = extractFragment(uri);
+        String fragment = UrlUtils.extractFragment(uri.url());
 
         // No fragment or empty fragment — always OK
         if (fragment == null || fragment.isEmpty()) {
@@ -189,29 +189,12 @@ public class FileChecker {
     }
 
     /**
-     * Extract the fragment from a URI string.
-     */
-    private static String extractFragment(Uri uri) {
-        String url = uri.url();
-        int hashIdx = url.indexOf('#');
-        if (hashIdx < 0) {
-            return null;
-        }
-        return url.substring(hashIdx + 1);
-    }
-
-    /**
-     * Convert a file:// URI to a Path.
+     * Convert a file:// URI to a Path, stripping query and fragment first.
      */
     private static Path uriToPath(Uri uri) {
         try {
-            URI javaUri = URI.create(uri.url());
-            // Strip fragment for path resolution (Path.of doesn't handle fragments)
-            if (javaUri.getFragment() != null) {
-                javaUri = new URI(javaUri.getScheme(), javaUri.getAuthority(),
-                        javaUri.getPath(), javaUri.getQuery(), null);
-            }
-            return Path.of(javaUri);
+            String pathStr = UrlUtils.fileUrlToPath(UrlUtils.stripQueryAndFragment(uri.url()));
+            return Path.of(pathStr);
         } catch (Exception e) {
             return null;
         }

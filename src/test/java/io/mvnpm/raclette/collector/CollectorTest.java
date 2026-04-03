@@ -348,6 +348,192 @@ class CollectorTest {
                 Uri.file(sub.resolve("sibling").toUri().toString()));
     }
 
+    // --- resolveFileRelative unit tests ---
+
+    @Test
+    void testResolveFileRelativeSimple() {
+        assertThat(Collector.resolveFileRelative("file:///path/to/dir/", "page.html"))
+                .isEqualTo("file:///path/to/dir/page.html");
+    }
+
+    @Test
+    void testResolveFileRelativeParent() {
+        assertThat(Collector.resolveFileRelative("file:///path/to/dir/", "../sibling"))
+                .isEqualTo("file:///path/to/sibling");
+    }
+
+    @Test
+    void testResolveFileRelativeRootRelative() {
+        assertThat(Collector.resolveFileRelative("file:///path/to/dir/", "/about"))
+                .isEqualTo("file:///path/to/dir/about");
+    }
+
+    @Test
+    void testResolveFileRelativeFromFile() {
+        // file base without trailing / is treated as a file, resolve from parent dir
+        assertThat(Collector.resolveFileRelative("file:///path/to/page.html", "other.html"))
+                .isEqualTo("file:///path/to/other.html");
+    }
+
+    @Test
+    void testResolveFileRelativeBarePath() {
+        // Bare path base (not file: URI) is treated as directory
+        assertThat(Collector.resolveFileRelative("/path/to/root", "index.html"))
+                .isEqualTo("file:///path/to/root/index.html");
+    }
+
+    @Test
+    void testResolveFileRelativeBarePathParent() {
+        assertThat(Collector.resolveFileRelative("/path/to/root", "../up.html"))
+                .isEqualTo("file:///path/to/up.html");
+    }
+
+    // --- clampFileUrl unit tests ---
+
+    @Test
+    void testClampFileUrlPlain(@TempDir Path root) {
+        String escaped = root.resolve("../target").normalize().toUri().toString();
+        String result = Collector.clampFileUrl(escaped, root.toUri().toString());
+        assertThat(result).isEqualTo(root.resolve("target").toUri().toString());
+    }
+
+    @Test
+    void testClampFileUrlWithFragment(@TempDir Path root) {
+        String escaped = root.resolve("../page").normalize().toUri() + "#section";
+        String result = Collector.clampFileUrl(escaped, root.toUri().toString());
+        assertThat(result).isEqualTo(root.resolve("page").toUri() + "#section");
+    }
+
+    @Test
+    void testClampFileUrlWithQuery(@TempDir Path root) {
+        String escaped = root.resolve("../page").normalize().toUri() + "?foo=bar";
+        String result = Collector.clampFileUrl(escaped, root.toUri().toString());
+        assertThat(result).isEqualTo(root.resolve("page").toUri() + "?foo=bar");
+    }
+
+    @Test
+    void testClampFileUrlWithQueryAndFragment(@TempDir Path root) {
+        String escaped = root.resolve("../page").normalize().toUri() + "?foo=bar#section";
+        String result = Collector.clampFileUrl(escaped, root.toUri().toString());
+        assertThat(result).isEqualTo(root.resolve("page").toUri() + "?foo=bar#section");
+    }
+
+    // --- resolveWithinRoot unit tests ---
+
+    @Test
+    void testResolveWithinRootUnchanged(@TempDir Path root) {
+        Path inside = root.resolve("docs/page");
+        assertThat(Collector.resolveWithinRoot(inside, root)).isEqualTo(inside);
+    }
+
+    @Test
+    void testResolveWithinRootOneDotDot(@TempDir Path root) {
+        Path escaped = root.resolve("../target").normalize();
+        assertThat(Collector.resolveWithinRoot(escaped, root)).isEqualTo(root.resolve("target"));
+    }
+
+    @Test
+    void testResolveWithinRootMultipleDotDot(@TempDir Path root) {
+        Path escaped = root.resolve("../../../other/page").normalize();
+        assertThat(Collector.resolveWithinRoot(escaped, root)).isEqualTo(root.resolve("other/page"));
+    }
+
+    @Test
+    void testResolveWithinRootToRoot(@TempDir Path root) {
+        Path escaped = root.resolve("..").normalize();
+        assertThat(Collector.resolveWithinRoot(escaped, root)).isEqualTo(root);
+    }
+
+    @Test
+    void testResolveWithinRootOnlyFilename(@TempDir Path root) {
+        Path escaped = root.resolve("../../secret").normalize();
+        assertThat(Collector.resolveWithinRoot(escaped, root)).isEqualTo(root.resolve("secret"));
+    }
+
+    // --- Clamping integration tests ---
+
+    @Test
+    void testRootClampingInCollect(@TempDir Path tempDir) throws IOException {
+        Path sub = tempDir.resolve("docs");
+        Files.createDirectories(sub);
+        Files.writeString(sub.resolve("page.html"),
+                "<a href=\"../../outside\">Escape</a>");
+
+        Set<Uri> links = Collector.builder()
+                .base(tempDir.toUri().toString())
+                .build()
+                .collectLinks(Set.of(new Input.FsPath(tempDir)));
+
+        // ../../outside from docs/ escapes root, should be clamped to root/outside
+        assertThat(links).containsExactly(
+                Uri.file(tempDir.resolve("outside").toUri().toString()));
+    }
+
+    @Test
+    void testRootClampingDisabledWithAllowAboveBase(@TempDir Path tempDir) throws IOException {
+        Path sub = tempDir.resolve("docs");
+        Files.createDirectories(sub);
+        Files.writeString(sub.resolve("page.html"),
+                "<a href=\"../../outside\">Escape</a>");
+
+        Set<Uri> links = Collector.builder()
+                .base(tempDir.toUri().toString())
+                .allowAboveBase(true)
+                .build()
+                .collectLinks(Set.of(new Input.FsPath(tempDir)));
+
+        // With allowAboveBase, the URI escapes above root
+        Path escaped = sub.resolve("../../outside").normalize();
+        assertThat(links).containsExactly(
+                Uri.file(escaped.toUri().toString()));
+    }
+
+    @Test
+    void testRootClampingPreservesFragment(@TempDir Path tempDir) throws IOException {
+        Path sub = tempDir.resolve("docs");
+        Files.createDirectories(sub);
+        Files.writeString(sub.resolve("page.html"),
+                "<a href=\"../../target#section\">Escape</a>");
+
+        Set<Uri> links = Collector.builder()
+                .base(tempDir.toUri().toString())
+                .build()
+                .collectLinks(Set.of(new Input.FsPath(tempDir)));
+
+        assertThat(links).containsExactly(
+                Uri.file(tempDir.resolve("target").toUri() + "#section"));
+    }
+
+    @Test
+    void testRootClampingPreservesQueryAndFragment(@TempDir Path tempDir) throws IOException {
+        Path sub = tempDir.resolve("docs");
+        Files.createDirectories(sub);
+        Files.writeString(sub.resolve("page.html"),
+                "<a href=\"../../target?foo=bar#section\">Escape</a>");
+
+        Set<Uri> links = Collector.builder()
+                .base(tempDir.toUri().toString())
+                .build()
+                .collectLinks(Set.of(new Input.FsPath(tempDir)));
+
+        assertThat(links).containsExactly(
+                Uri.file(tempDir.resolve("target").toUri() + "?foo=bar#section"));
+    }
+
+    @Test
+    void testNoClampingWithHttpBase() {
+        String html = "<a href=\"../../outside\">Escape</a>";
+
+        Set<Uri> links = Collector.builder()
+                .base("https://example.com/docs/sub/")
+                .build()
+                .collectLinks(Set.of(new Input.StringContent(html)));
+
+        // HTTP base: no clamping, resolves normally
+        assertThat(links).containsExactly(
+                Uri.website("https://example.com/outside"));
+    }
+
     /**
      * StringContent input still uses the global base (unchanged behavior).
      */
