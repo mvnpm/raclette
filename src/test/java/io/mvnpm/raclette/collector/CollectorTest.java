@@ -304,4 +304,63 @@ class CollectorTest {
         assertThat(links).containsExactlyInAnyOrder(
                 Uri.website("https://example.com/html"));
     }
+
+    // --- Per-file base resolution ---
+
+    /**
+     * Relative links in files should resolve against the file's parent directory,
+     * not the global base. This matches lychee's behavior.
+     */
+    @Test
+    void testPerFileBaseResolution(@TempDir Path tempDir) throws IOException {
+        // Create docs/getting-started/index.html with a relative link "../config"
+        Path gettingStarted = tempDir.resolve("docs/getting-started");
+        Files.createDirectories(gettingStarted);
+        Files.writeString(gettingStarted.resolve("index.html"),
+                "<a href=\"../config\">Config</a>");
+
+        Set<Uri> links = Collector.builder()
+                .base(tempDir.toUri().toString())
+                .build()
+                .collectLinks(Set.of(new Input.FsPath(tempDir)));
+
+        // "../config" from docs/getting-started/ should resolve to docs/config
+        assertThat(links).containsExactlyInAnyOrder(
+                Uri.file(tempDir.resolve("docs/config").toUri().toString()));
+    }
+
+    /**
+     * Relative sibling links resolve within the same directory.
+     */
+    @Test
+    void testPerFileBaseSiblingLink(@TempDir Path tempDir) throws IOException {
+        Path sub = tempDir.resolve("sub");
+        Files.createDirectories(sub);
+        Files.writeString(sub.resolve("page.html"),
+                "<a href=\"sibling\">Sibling</a>");
+
+        Set<Uri> links = Collector.builder()
+                .base(tempDir.toUri().toString())
+                .build()
+                .collectLinks(Set.of(new Input.FsPath(tempDir)));
+
+        assertThat(links).containsExactlyInAnyOrder(
+                Uri.file(sub.resolve("sibling").toUri().toString()));
+    }
+
+    /**
+     * StringContent input still uses the global base (unchanged behavior).
+     */
+    @Test
+    void testStringContentStillUsesGlobalBase() {
+        String html = "<a href=\"relative\">Link</a>";
+
+        Set<Uri> links = Collector.builder()
+                .base("https://example.com/docs/")
+                .build()
+                .collectLinks(Set.of(new Input.StringContent(html)));
+
+        assertThat(links).containsExactlyInAnyOrder(
+                Uri.website("https://example.com/docs/relative"));
+    }
 }

@@ -11,7 +11,6 @@ import java.util.Map;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 import io.mvnpm.raclette.quirks.Quirks;
 import io.mvnpm.raclette.quirks.Quirks.QuirkResult;
@@ -59,6 +58,7 @@ public class WebsiteChecker {
             try {
                 SSLContext sslContext = createInsecureSslContext();
                 builder.sslContext(sslContext);
+                // No additional sslParameters needed — X509ExtendedTrustManager handles hostname verification too
             } catch (Exception e) {
                 throw new RuntimeException("Failed to create insecure SSL context", e);
             }
@@ -200,8 +200,11 @@ public class WebsiteChecker {
      * Create an SSLContext that trusts all certificates (for allowInsecure mode).
      */
     private static SSLContext createInsecureSslContext() throws Exception {
+        // X509ExtendedTrustManager is required (not X509TrustManager) because Java's HttpClient
+        // delegates hostname verification to the TrustManager's Socket/SSLEngine overloads.
+        // A plain X509TrustManager only bypasses cert chain validation, not hostname verification.
         TrustManager[] trustAll = new TrustManager[] {
-                new X509TrustManager() {
+                new javax.net.ssl.X509ExtendedTrustManager() {
                     @Override
                     public X509Certificate[] getAcceptedIssuers() {
                         return new X509Certificate[0];
@@ -213,6 +216,22 @@ public class WebsiteChecker {
 
                     @Override
                     public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                    }
+
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] certs, String authType, java.net.Socket socket) {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] certs, String authType, java.net.Socket socket) {
+                    }
+
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] certs, String authType, javax.net.ssl.SSLEngine engine) {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] certs, String authType, javax.net.ssl.SSLEngine engine) {
                     }
                 }
         };

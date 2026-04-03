@@ -200,7 +200,10 @@ public class Collector implements AutoCloseable {
             // HTML files: parse as HTML to extract links from attributes
             // Non-HTML files: parse as HTML too (JSoup treats plaintext as text nodes,
             // and extractPlainTextUrls finds URLs/emails when includeVerbatim=true)
-            return collectFromString(content, base);
+            // Use the file's parent directory as base for resolving relative links (matches lychee).
+            // The global base is only used for StringContent and RemoteUrl inputs.
+            String fileBase = file.getParent().toUri().toString();
+            return collectFromString(content, fileBase);
         } catch (IOException e) {
             return Set.of();
         }

@@ -200,6 +200,36 @@ class FileCheckerTest {
 
     // --- test_fallback_extensions_on_directories ---
 
+    // --- test_index_file_traversal_corner ---
+
+    @Test
+    void testIndexFileTraversalCorner() {
+        // Index file names can contain path fragments and they will be traversed
+        FileChecker checkerDotDot = new FileChecker(List.of(),
+                List.of("../index_dir/index.html"), true);
+
+        // empty_dir with "../index_dir/index.html" resolves to index_dir/index.html
+        Path resolved = checkerDotDot.resolveLocalPath(
+                FIXTURES_PATH.resolve("filechecker/empty_dir"),
+                fixtureUriWithFragment("filechecker/empty_dir", "fragment"));
+        assertThat(resolved).isNotNull();
+        assertThat(resolved.toString()).contains("index_dir/index.html");
+
+        // Absolute path to index file
+        String absoluteHtml = FIXTURES_PATH.resolve("filechecker/index_dir/index.html")
+                .toAbsolutePath().toString();
+        FileChecker checkerAbsolute = new FileChecker(List.of(),
+                List.of(absoluteHtml), true);
+
+        resolved = checkerAbsolute.resolveLocalPath(
+                FIXTURES_PATH.resolve("filechecker/empty_dir"),
+                fixtureUriWithFragment("filechecker/empty_dir", "fragment"));
+        assertThat(resolved).isNotNull();
+        assertThat(resolved.toString()).endsWith("index_dir/index.html");
+    }
+
+    // --- test_fallback_extensions_on_directories ---
+
     @Test
     void testFallbackExtensionsOnDirectories() {
         FileChecker checker = new FileChecker(List.of("html"), null, true);

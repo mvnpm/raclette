@@ -156,6 +156,65 @@ class ClientTest {
         }
     }
 
+    // --- test_nonexistent_with_path ---
+
+    @Test
+    void testNonexistentWithPath(WireMockRuntimeInfo wmInfo) {
+        wmInfo.getWireMock().register(get("/invalid").willReturn(aResponse().withStatus(404)));
+
+        try (Client client = Client.builder().maxRetries(0).build()) {
+            Status status = client.check(wmInfo.getHttpBaseUrl() + "/invalid");
+            assertThat(status.isError()).isTrue();
+        }
+    }
+
+    // --- test_require_https ---
+
+    @Test
+    void testRequireHttps(WireMockRuntimeInfo wmInfo) {
+        // Without requireHttps, HTTP works fine
+        wmInfo.getWireMock().register(get("/").willReturn(aResponse().withStatus(200)));
+
+        try (Client client = Client.builder().build()) {
+            Status status = client.check(wmInfo.getHttpBaseUrl());
+            assertThat(status.isSuccess()).isTrue();
+        }
+
+        // With requireHttps, HTTP URL triggers HTTPS probe.
+        // Raclette's implementation: if HTTPS version also succeeds → error.
+        // WireMock only serves HTTP, so HTTPS probe fails → still success.
+        // This test verifies requireHttps doesn't break normal HTTP when HTTPS is unavailable.
+        try (Client client = Client.builder().requireHttps(true).build()) {
+            Status status = client.check(wmInfo.getHttpBaseUrl());
+            // HTTPS is not available on WireMock, so no error
+            assertThat(status.isSuccess()).isTrue();
+        }
+    }
+
+    // --- test_avoid_reqwest_panic ---
+
+    @Test
+    void testMalformedUrlDoesNotThrow() {
+        String[] malformed = {
+                "://no-scheme",
+                "",
+                "   ",
+                "not a url at all",
+        };
+
+        try (Client client = Client.builder().build()) {
+            for (String url : malformed) {
+                // Should not throw — returns null, unsupported, or excluded
+                Uri uri = Uri.tryFrom(url);
+                if (uri != null) {
+                    Status status = client.check(uri);
+                    assertThat(status.isUnsupported() || status.isExcluded() || status.isError())
+                            .as("malformed: %s", url).isTrue();
+                }
+            }
+        }
+    }
+
     @Test
     void testRedirects(WireMockRuntimeInfo wmInfo) {
         wmInfo.getWireMock().register(get("/redirect")
@@ -167,6 +226,38 @@ class ClientTest {
         try (Client client = Client.builder().maxRedirects(5).build()) {
             Status status = client.check(wmInfo.getHttpBaseUrl() + "/redirect");
             assertThat(status.isSuccess()).isTrue();
+        }
+    }
+
+    // --- test_invalid_ssl ---
+
+    @Test
+    void testInvalidSsl() {
+        // Use WireMockExtension programmatically for HTTPS
+        com.github.tomakehurst.wiremock.WireMockServer httpsServer = new com.github.tomakehurst.wiremock.WireMockServer(
+                com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig()
+                        .dynamicHttpsPort()
+                        .dynamicPort());
+        httpsServer.start();
+        try {
+            httpsServer.stubFor(get("/").willReturn(aResponse().withStatus(200)));
+
+            String httpsUrl = "https://localhost:" + httpsServer.httpsPort();
+
+            // Default client rejects self-signed cert
+            try (Client client = Client.builder().maxRetries(0).build()) {
+                Status status = client.check(httpsUrl);
+                assertThat(status.isError() || status.isTimeout())
+                        .as("self-signed cert should be rejected").isTrue();
+            }
+
+            // allowInsecure bypasses cert validation
+            try (Client client = Client.builder().allowInsecure(true).build()) {
+                Status status = client.check(httpsUrl);
+                assertThat(status.isSuccess()).as("allowInsecure should accept self-signed cert").isTrue();
+            }
+        } finally {
+            httpsServer.stop();
         }
     }
 }
