@@ -57,20 +57,21 @@ public sealed interface BaseInfo {
         }
         try {
             URI uri = new URI(url);
-            if (uri.getScheme() != null && uri.getAuthority() != null) {
-                URI originUri = new URI(uri.getScheme(), uri.getAuthority(), "/", null, null);
-                String origin = originUri.toString();
-                // Treat empty path as "/" so relativize works correctly
-                URI effective = (uri.getPath() == null || uri.getPath().isEmpty())
-                        ? new URI(uri.getScheme(), uri.getAuthority(), "/", uri.getQuery(), uri.getFragment())
-                        : uri;
-                String path = originUri.relativize(effective).toString();
-                return new Full(origin, path);
+            if (uri.getScheme() == null || uri.getAuthority() == null) {
+                return new None();
             }
+            URI originUri = new URI(uri.getScheme(), uri.getAuthority(), "/", null, null);
+            String origin = originUri.toString();
+            // Treat empty path as "/" so relativize works correctly
+            String rawPath = uri.getPath();
+            if (rawPath == null || rawPath.isEmpty()) {
+                uri = new URI(uri.getScheme(), uri.getAuthority(), "/", uri.getQuery(), uri.getFragment());
+            }
+            String path = originUri.relativize(uri).toString();
+            return new Full(origin, path);
         } catch (URISyntaxException e) {
-            // fall through
+            return new None();
         }
-        return new None();
     }
 
     /**
@@ -149,12 +150,12 @@ public sealed interface BaseInfo {
             };
 
             case Full(String origin, String path) -> {
-                // For file:// root-relative: prepend "." to keep within origin dir.
-                // "/docs" becomes "./docs", resolving against origin (the root dir).
+                // For file:// root-relative links, prepend "." so "/docs" becomes
+                // "./docs" and resolves within the origin (root) directory.
                 if (rel instanceof RelativeUri.Root r && origin.startsWith("file://")) {
                     yield uriResolve(origin, "." + r.text());
                 }
-                // General case: join origin with path (to get source URL), then join with link text.
+                // General: reconstruct the source URL, then resolve the link against it.
                 String base = path.isEmpty() ? origin : uriResolve(origin, path);
                 yield uriResolve(base, rel.linkText());
             }

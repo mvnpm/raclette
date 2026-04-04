@@ -102,10 +102,6 @@ public class HtmlExtractor {
         return fragments;
     }
 
-    private static boolean isVerbatimElement(String tagName) {
-        return VERBATIM_ELEMENTS.contains(tagName);
-    }
-
     /**
      * Check if the given text looks like an email address.
      * Mirrors lychee's is_email_link: the whole string must be an email.
@@ -145,7 +141,7 @@ public class HtmlExtractor {
                 String tag = el.tagName();
 
                 // Track verbatim nesting
-                if (!includeVerbatim && isVerbatimElement(tag)) {
+                if (!includeVerbatim && VERBATIM_ELEMENTS.contains(tag)) {
                     verbatimDepth++;
                 }
 
@@ -217,14 +213,11 @@ public class HtmlExtractor {
                         continue;
                     }
 
-                    // Filter email-like links
-                    if (isEmailLink(attrValue)) {
-                        boolean isMailto = attrValue.startsWith("mailto:");
-                        boolean isTel = attrValue.startsWith("tel:");
-                        boolean isHref = attrName.equals("href");
-                        if (!((isMailto && isHref) || (isTel && isHref))) {
-                            continue;
-                        }
+                    // Only allow email-like links as mailto: or tel: in href
+                    if (isEmailLink(attrValue)
+                            && !(attrName.equals("href")
+                                    && (attrValue.startsWith("mailto:") || attrValue.startsWith("tel:")))) {
+                        continue;
                     }
 
                     Range.AttributeRange attrRange = el.attributes().sourceRange(attrName);
@@ -249,7 +242,7 @@ public class HtmlExtractor {
         public void tail(Node node, int depth) {
             if (node instanceof Element el) {
                 String tag = el.tagName();
-                if (!includeVerbatim && isVerbatimElement(tag) && verbatimDepth > 0) {
+                if (!includeVerbatim && VERBATIM_ELEMENTS.contains(tag) && verbatimDepth > 0) {
                     verbatimDepth--;
                 }
             }
@@ -290,21 +283,11 @@ public class HtmlExtractor {
             int lastTrackedPos = 0;
 
             while (i < text.length()) {
-                int httpIdx = text.indexOf("http://", i);
-                int httpsIdx = text.indexOf("https://", i);
-                int mailtoIdx = text.indexOf("mailto:", i);
-
-                // Find the earliest match
-                int startIdx = -1;
-                if (httpIdx >= 0) {
-                    startIdx = httpIdx;
-                }
-                if (httpsIdx >= 0 && (startIdx < 0 || httpsIdx < startIdx)) {
-                    startIdx = httpsIdx;
-                }
-                if (mailtoIdx >= 0 && (startIdx < 0 || mailtoIdx < startIdx)) {
-                    startIdx = mailtoIdx;
-                }
+                // Find the earliest URL prefix match
+                int startIdx = minPositive(
+                        text.indexOf("http://", i),
+                        text.indexOf("https://", i),
+                        text.indexOf("mailto:", i));
 
                 if (startIdx < 0) {
                     break;
@@ -359,12 +342,24 @@ public class HtmlExtractor {
             while (matcher.find()) {
                 int pos = matcher.start();
                 // Skip if preceded by "mailto:" — already captured
-                if (pos >= 7 && text.substring(pos - 7, pos).equals("mailto:")) {
+                if (pos >= 7 && text.startsWith("mailto:", pos - 7)) {
                     continue;
                 }
                 String email = matcher.group();
                 links.add(RawUri.ofText("mailto:" + email, startLine, startCol));
             }
+        }
+
+        /** Return the smallest non-negative value, or -1 if all are negative. */
+        private static int minPositive(int a, int b, int c) {
+            int min = -1;
+            if (a >= 0)
+                min = a;
+            if (b >= 0 && (min < 0 || b < min))
+                min = b;
+            if (c >= 0 && (min < 0 || c < min))
+                min = c;
+            return min;
         }
     }
 }

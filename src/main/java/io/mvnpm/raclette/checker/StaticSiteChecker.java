@@ -222,32 +222,28 @@ public class StaticSiteChecker implements AutoCloseable {
         if (!m.find()) {
             return uri;
         }
-        String rest = url.substring(m.end());
+        String afterHost = url.substring(m.end());
 
-        // Separate fragment
-        String[] parts = UrlUtils.splitFragment(rest);
-        rest = parts[0];
-        String fragment = parts[1] != null ? "#" + parts[1] : null;
-
-        // Strip query string
-        rest = UrlUtils.stripQueryAndFragment(rest);
+        // Separate fragment and strip query string
+        String fragment = UrlUtils.extractFragment(afterHost);
+        String pathOnly = UrlUtils.stripQueryAndFragment(afterHost);
 
         // Strip basePath prefix
         if (basePath != null && !basePath.equals("/")) {
             String prefix = UrlUtils.normalizePathPrefix(basePath);
-            if (rest.startsWith(prefix)) {
-                rest = "/" + rest.substring(prefix.length());
+            if (pathOnly.startsWith(prefix)) {
+                pathOnly = "/" + pathOnly.substring(prefix.length());
             }
         }
 
         // Resolve against site root
-        String pathPart = rest.startsWith("/") ? rest.substring(1) : rest;
-        Path resolved = path.resolve(pathPart);
+        String relativePart = pathOnly.startsWith("/") ? pathOnly.substring(1) : pathOnly;
+        Path resolved = path.resolve(relativePart);
         String fileUri = resolved.toUri().toString();
 
         // Preserve fragment
         if (fragment != null) {
-            fileUri += fragment;
+            fileUri += "#" + fragment;
         }
         return Uri.file(fileUri);
     }

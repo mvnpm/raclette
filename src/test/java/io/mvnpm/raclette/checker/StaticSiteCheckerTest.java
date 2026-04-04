@@ -464,6 +464,26 @@ class StaticSiteCheckerTest {
             assertThat(broken).isEmpty();
         }
 
+        @Test
+        void unicodeAndSpecialCharsInFilename(@TempDir Path siteRoot) throws IOException {
+            // Reproduces: HTML entity-encoded src with percent-encoded special chars
+            // gets decoded through the pipeline, producing a file URI that URI.create() can't handle
+            Path posts = siteRoot.resolve("posts");
+            Files.createDirectories(posts);
+            Files.writeString(posts.resolve("c'est de la poussi\u00e8re d'\u00e9toile.jpg"), "fake image");
+            createSite(siteRoot,
+                    "posts/index.html",
+                    "<html><img src=\"c&#39;est%20de%20la%20poussi%C3%A8re%20d&#39;%C3%A9toile.jpg\"></html>");
+
+            Map<Uri, Status> broken = StaticSiteChecker.builder()
+                    .path(siteRoot)
+                    .sequential(true)
+                    .build()
+                    .check();
+
+            assertThat(broken).isEmpty();
+        }
+
         // --- integration ---
 
         @Test

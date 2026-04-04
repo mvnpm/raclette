@@ -52,11 +52,21 @@ public final class UrlUtils {
 
     /**
      * Convert a file: URL to a filesystem path string.
-     * Uses URI.create().getPath() for proper percent-decoding and authority handling.
+     * Tries URI.create() first for proper percent-decoding, falls back to manual
+     * prefix stripping when the URL contains already-decoded characters (spaces,
+     * apostrophes, Unicode) that URI.create() can't parse.
      */
     public static String fileUrlToPath(String url) {
         if (url.startsWith("file:")) {
-            return URI.create(url).getPath();
+            try {
+                return URI.create(url).getPath();
+            } catch (IllegalArgumentException e) {
+                String path = url.substring("file:".length());
+                while (path.startsWith("//")) {
+                    path = path.substring(1);
+                }
+                return path;
+            }
         }
         return url;
     }
@@ -113,17 +123,18 @@ public final class UrlUtils {
         if (filePath.startsWith(root)) {
             return filePath;
         }
+        // Find the first non-".." segment in the relative path
         Path relative = root.relativize(filePath);
-        for (int i = 0; i < relative.getNameCount(); i++) {
-            if (!relative.getName(i).toString().equals("..")) {
-                Path safe = root.resolve(relative.subpath(i, relative.getNameCount())).normalize();
-                if (safe.startsWith(root)) {
-                    return safe;
-                }
-                break;
-            }
+        int firstReal = 0;
+        while (firstReal < relative.getNameCount()
+                && relative.getName(firstReal).toString().equals("..")) {
+            firstReal++;
         }
-        return root;
+        if (firstReal >= relative.getNameCount()) {
+            return root;
+        }
+        Path safe = root.resolve(relative.subpath(firstReal, relative.getNameCount())).normalize();
+        return safe.startsWith(root) ? safe : root;
     }
 
     /**

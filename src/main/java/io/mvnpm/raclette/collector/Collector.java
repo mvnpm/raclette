@@ -22,7 +22,6 @@ import java.util.Set;
 import io.mvnpm.raclette.extract.Extractor;
 import io.mvnpm.raclette.types.BaseInfo;
 import io.mvnpm.raclette.types.LinkResolutionException;
-import io.mvnpm.raclette.types.RawUri;
 import io.mvnpm.raclette.types.Uri;
 
 /**
@@ -57,11 +56,9 @@ public class Collector implements AutoCloseable {
      * Callers resolve via {@code link.baseInfo().parseUrlText(link.rawUri().text())}.
      */
     public List<CollectedLink> collectRawLinks(Set<Input> inputs) {
-        List<CollectedLink> result = new ArrayList<>();
-        for (Input input : inputs) {
-            result.addAll(collectRawFromInput(input));
-        }
-        return result;
+        return inputs.stream()
+                .flatMap(input -> collectRawFromInput(input).stream())
+                .toList();
     }
 
     /**
@@ -93,8 +90,7 @@ public class Collector implements AutoCloseable {
     }
 
     private List<CollectedLink> collectRawFromString(String content, BaseInfo baseInfo) {
-        List<RawUri> rawUris = extractor.extractHtmlRaw(content);
-        return rawUris.stream()
+        return extractor.extractHtmlRaw(content).stream()
                 .map(raw -> new CollectedLink(raw, baseInfo))
                 .toList();
     }
@@ -114,67 +110,68 @@ public class Collector implements AutoCloseable {
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
                 return collectRawFromString(response.body(), BaseInfo.fromSourceUrl(url));
             }
-        } catch (IOException | InterruptedException e) {
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
+        } catch (IOException e) {
+            // Skip unreachable URLs
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
         return List.of();
     }
 
     private List<CollectedLink> collectRawFromFsPath(Path path) {
-        List<CollectedLink> links = new ArrayList<>();
         if (Files.isRegularFile(path)) {
-            links.addAll(collectRawFromFile(path));
-        } else if (Files.isDirectory(path)) {
-            try {
-                Files.walkFileTree(path, new SimpleFileVisitor<>() {
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                        if (skipHidden && isHidden(file)) {
-                            return FileVisitResult.CONTINUE;
-                        }
-                        if (isHtmlFile(file) || includeVerbatim) {
-                            links.addAll(collectRawFromFile(file));
-                        }
+            return collectRawFromFile(path);
+        }
+        if (!Files.isDirectory(path)) {
+            return List.of();
+        }
+        List<CollectedLink> links = new ArrayList<>();
+        try {
+            Files.walkFileTree(path, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    if (skipHidden && isHidden(file)) {
                         return FileVisitResult.CONTINUE;
                     }
+                    if (isHtmlFile(file) || includeVerbatim) {
+                        links.addAll(collectRawFromFile(file));
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
 
-                    @Override
-                    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                        if (skipHidden && isHidden(dir) && !dir.equals(path)) {
-                            return FileVisitResult.SKIP_SUBTREE;
-                        }
-                        return FileVisitResult.CONTINUE;
+                @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                    if (skipHidden && isHidden(dir) && !dir.equals(path)) {
+                        return FileVisitResult.SKIP_SUBTREE;
                     }
-                });
-            } catch (IOException e) {
-                // Skip unreadable directories
-            }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (IOException e) {
+            // Skip unreadable directories
         }
         return links;
     }
 
     private List<CollectedLink> collectRawFromGlob(String pattern) {
-        List<CollectedLink> links = new ArrayList<>();
-        Path patternPath = Path.of(pattern);
-        Path baseDir = findGlobBaseDir(patternPath);
+        Path baseDir = findGlobBaseDir(Path.of(pattern));
+        if (!Files.isDirectory(baseDir)) {
+            return List.of();
+        }
         PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
-
-        if (Files.isDirectory(baseDir)) {
-            try {
-                Files.walkFileTree(baseDir, new SimpleFileVisitor<>() {
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                        if (matcher.matches(file)) {
-                            links.addAll(collectRawFromFile(file));
-                        }
-                        return FileVisitResult.CONTINUE;
+        List<CollectedLink> links = new ArrayList<>();
+        try {
+            Files.walkFileTree(baseDir, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    if (matcher.matches(file)) {
+                        links.addAll(collectRawFromFile(file));
                     }
-                });
-            } catch (IOException e) {
-                // Skip unreadable directories
-            }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (IOException e) {
+            // Skip unreadable directories
         }
         return links;
     }
@@ -262,23 +259,13 @@ public class Collector implements AutoCloseable {
     // --- Utilities ---
 
     private static Path findGlobBaseDir(Path patternPath) {
-        List<Path> parts = new ArrayList<>();
+        Path result = patternPath.isAbsolute() ? patternPath.getRoot() : Path.of(".");
         for (Path part : patternPath) {
             String s = part.toString();
             if (s.contains("*") || s.contains("?") || s.contains("[") || s.contains("{")) {
                 break;
             }
-            parts.add(part);
-        }
-        if (parts.isEmpty()) {
-            return Path.of(".");
-        }
-        Path result = parts.get(0);
-        for (int i = 1; i < parts.size(); i++) {
-            result = result.resolve(parts.get(i));
-        }
-        if (patternPath.isAbsolute()) {
-            return patternPath.getRoot().resolve(result);
+            result = result.resolve(part);
         }
         return result;
     }

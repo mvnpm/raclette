@@ -107,6 +107,15 @@ class UrlUtilsTest {
     }
 
     @Test
+    void fileUrlToPathDecodedUnicodeAndSpecialChars() {
+        // Reproduces the bug: Collector produces file URIs with decoded characters
+        // (spaces, apostrophes, accented chars) that URI.create() can't handle
+        String url = "file:///site/posts/c'est de la poussi\u00e8re d'\u00e9toile.jpg";
+        assertThat(UrlUtils.fileUrlToPath(url))
+                .isEqualTo("/site/posts/c'est de la poussi\u00e8re d'\u00e9toile.jpg");
+    }
+
+    @Test
     void fileUrlToPathNonFilePassthrough() {
         assertThat(UrlUtils.fileUrlToPath("/plain/path")).isEqualTo("/plain/path");
     }
