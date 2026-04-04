@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>About (with base href)</title>
+  <base href="/my-project/">
+</head>
+<body>
+  <h1>About (base href="/my-project/")</h1>
+  <ul>
+    <li><a href="docs/index.html" id="rel-docs">Relative: docs/index.html</a></li>
+    <li><a href="about/other.html" id="rel-other">Relative: about/other.html</a></li>
+    <li><a href="/my-project/events/index.html" id="root-rel-bp">Root-relative: /my-project/events/index.html</a></li>
+    <li><a href="/docs/index.html" id="root-rel-no-bp">Root-relative (no basePath): /docs/index.html</a></li>
+    <li><a href="../index.html" id="parent-rel">Parent relative: ../index.html</a></li>
+    <li><a href="broken/link.html" id="broken">Broken: broken/link.html</a></li>
+  </ul>
+</body>
+</html>

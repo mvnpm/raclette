@@ -367,6 +367,83 @@ class HtmlExtractorTest {
         assertThat(uris.get(1).line()).isEqualTo(2);
     }
 
+    // --- <base href> extraction ---
+
+    @Test
+    void testExtractBaseHref() {
+        String html = """
+                <html>
+                <head><base href="https://example.com/docs/"></head>
+                <body><a href="page.html">Link</a></body>
+                </html>
+                """;
+        assertThat(extractor.extractBaseHref(html)).isEqualTo("https://example.com/docs/");
+    }
+
+    @Test
+    void testExtractBaseHrefAbsent() {
+        String html = """
+                <html>
+                <head><title>No base</title></head>
+                <body><a href="page.html">Link</a></body>
+                </html>
+                """;
+        assertThat(extractor.extractBaseHref(html)).isNull();
+    }
+
+    @Test
+    void testExtractBaseHrefFirstWins() {
+        // Per HTML spec, only the first <base href> is used
+        String html = """
+                <html>
+                <head>
+                    <base href="https://first.com/">
+                    <base href="https://second.com/">
+                </head>
+                <body><a href="page.html">Link</a></body>
+                </html>
+                """;
+        assertThat(extractor.extractBaseHref(html)).isEqualTo("https://first.com/");
+    }
+
+    @Test
+    void testExtractBaseHrefEmptyIgnored() {
+        String html = """
+                <html>
+                <head><base href=""></head>
+                <body><a href="page.html">Link</a></body>
+                </html>
+                """;
+        assertThat(extractor.extractBaseHref(html)).isNull();
+    }
+
+    @Test
+    void testExtractBaseHrefNoHrefAttribute() {
+        // <base> can have target only, no href
+        String html = """
+                <html>
+                <head><base target="_blank"></head>
+                <body><a href="page.html">Link</a></body>
+                </html>
+                """;
+        assertThat(extractor.extractBaseHref(html)).isNull();
+    }
+
+    @Test
+    void testBaseHrefNotExtractedAsLink() {
+        // The <base href> itself should not appear in the extracted links
+        String html = """
+                <html>
+                <head><base href="https://example.com/docs/"></head>
+                <body><a href="page.html">Link</a></body>
+                </html>
+                """;
+        List<RawUri> links = extractor.extractLinks(html, false);
+        assertThat(links).extracting(RawUri::text)
+                .containsExactly("page.html")
+                .doesNotContain("https://example.com/docs/");
+    }
+
     @Test
     void testExtractLinksAfterEmptyVerbatimBlock() {
         String input = """

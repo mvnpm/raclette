@@ -7,7 +7,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -348,152 +347,14 @@ class CollectorTest {
                 Uri.file(sub.resolve("sibling").toUri().toString()));
     }
 
-    // --- resolveFileRelative unit tests ---
-
     @Test
-    void testResolveFileRelativeSimple() {
-        assertThat(Collector.resolveFileRelative("file:///path/to/dir/", "page.html"))
-                .isEqualTo("file:///path/to/dir/page.html");
-    }
-
-    @Test
-    void testResolveFileRelativeParent() {
-        assertThat(Collector.resolveFileRelative("file:///path/to/dir/", "../sibling"))
-                .isEqualTo("file:///path/to/sibling");
-    }
-
-    @Test
-    void testResolveFileRelativeRootRelative() {
-        assertThat(Collector.resolveFileRelative("file:///path/to/dir/", "/about"))
-                .isEqualTo("file:///path/to/dir/about");
-    }
-
-    @Test
-    void testResolveFileRelativeFromFile() {
-        // file base without trailing / is treated as a file, resolve from parent dir
-        assertThat(Collector.resolveFileRelative("file:///path/to/page.html", "other.html"))
-                .isEqualTo("file:///path/to/other.html");
-    }
-
-    @Test
-    void testResolveFileRelativeBarePath() {
-        // Bare path base (not file: URI) is treated as directory
-        assertThat(Collector.resolveFileRelative("/path/to/root", "index.html"))
-                .isEqualTo("file:///path/to/root/index.html");
-    }
-
-    @Test
-    void testResolveFileRelativeBarePathParent() {
-        assertThat(Collector.resolveFileRelative("/path/to/root", "../up.html"))
-                .isEqualTo("file:///path/to/up.html");
-    }
-
-    // --- clampFileUrl unit tests ---
-
-    @Test
-    void testClampFileUrlPlain(@TempDir Path root) {
-        String escaped = root.resolve("../target").normalize().toUri().toString();
-        String result = Collector.clampFileUrl(escaped, root.toUri().toString());
-        assertThat(result).isEqualTo(root.resolve("target").toUri().toString());
-    }
-
-    @Test
-    void testClampFileUrlWithFragment(@TempDir Path root) {
-        String escaped = root.resolve("../page").normalize().toUri() + "#section";
-        String result = Collector.clampFileUrl(escaped, root.toUri().toString());
-        assertThat(result).isEqualTo(root.resolve("page").toUri() + "#section");
-    }
-
-    @Test
-    void testClampFileUrlWithQuery(@TempDir Path root) {
-        String escaped = root.resolve("../page").normalize().toUri() + "?foo=bar";
-        String result = Collector.clampFileUrl(escaped, root.toUri().toString());
-        assertThat(result).isEqualTo(root.resolve("page").toUri() + "?foo=bar");
-    }
-
-    @Test
-    void testClampFileUrlWithQueryAndFragment(@TempDir Path root) {
-        String escaped = root.resolve("../page").normalize().toUri() + "?foo=bar#section";
-        String result = Collector.clampFileUrl(escaped, root.toUri().toString());
-        assertThat(result).isEqualTo(root.resolve("page").toUri() + "?foo=bar#section");
-    }
-
-    // --- resolveWithinRoot unit tests ---
-
-    @Test
-    void testResolveWithinRootUnchanged(@TempDir Path root) {
-        Path inside = root.resolve("docs/page");
-        assertThat(Collector.resolveWithinRoot(inside, root)).isEqualTo(inside);
-    }
-
-    @Test
-    void testResolveWithinRootOneDotDot(@TempDir Path root) {
-        Path escaped = root.resolve("../target").normalize();
-        assertThat(Collector.resolveWithinRoot(escaped, root)).isEqualTo(root.resolve("target"));
-    }
-
-    @Test
-    void testResolveWithinRootMultipleDotDot(@TempDir Path root) {
-        Path escaped = root.resolve("../../../other/page").normalize();
-        assertThat(Collector.resolveWithinRoot(escaped, root)).isEqualTo(root.resolve("other/page"));
-    }
-
-    @Test
-    void testResolveWithinRootToRoot(@TempDir Path root) {
-        Path escaped = root.resolve("..").normalize();
-        assertThat(Collector.resolveWithinRoot(escaped, root)).isEqualTo(root);
-    }
-
-    @Test
-    void testResolveWithinRootOnlyFilename(@TempDir Path root) {
-        Path escaped = root.resolve("../../secret").normalize();
-        assertThat(Collector.resolveWithinRoot(escaped, root)).isEqualTo(root.resolve("secret"));
-    }
-
-    // --- Clamping integration tests ---
-
-    @Test
-    void testRootClampingInCollect(@TempDir Path tempDir) throws IOException {
-        Path sub = tempDir.resolve("docs");
-        Files.createDirectories(sub);
-        Files.writeString(sub.resolve("page.html"),
-                "<a href=\"../../outside\">Escape</a>");
-
-        Set<Uri> links = Collector.builder()
-                .base(tempDir.toUri().toString())
-                .build()
-                .collectLinks(Set.of(new Input.FsPath(tempDir)));
-
-        // ../../outside from docs/ escapes root, should be clamped to root/outside
-        assertThat(links).containsExactly(
-                Uri.file(tempDir.resolve("outside").toUri().toString()));
-    }
-
-    @Test
-    void testRootClampingDisabledWithAllowAboveBase(@TempDir Path tempDir) throws IOException {
-        Path sub = tempDir.resolve("docs");
-        Files.createDirectories(sub);
-        Files.writeString(sub.resolve("page.html"),
-                "<a href=\"../../outside\">Escape</a>");
-
-        Set<Uri> links = Collector.builder()
-                .base(tempDir.toUri().toString())
-                .allowAboveBase(true)
-                .build()
-                .collectLinks(Set.of(new Input.FsPath(tempDir)));
-
-        // With allowAboveBase, the URI escapes above root
-        Path escaped = sub.resolve("../../outside").normalize();
-        assertThat(links).containsExactly(
-                Uri.file(escaped.toUri().toString()));
-    }
-
-    @Test
-    void testRootClampingPreservesFragment(@TempDir Path tempDir) throws IOException {
-        Path sub = tempDir.resolve("docs");
-        Files.createDirectories(sub);
-        Files.writeString(sub.resolve("page.html"),
-                "<a href=\"../../target#section\">Escape</a>");
+    void testRootRelativeLinkResolvesAgainstSiteRoot(@TempDir Path tempDir) throws IOException {
+        // Simulate: /about/index.html has <a href="/docs/getting-started/">
+        // Should resolve to file:///site/docs/getting-started/, not file:///site/about/docs/getting-started/
+        Path about = tempDir.resolve("about");
+        Files.createDirectories(about);
+        Files.writeString(about.resolve("index.html"),
+                "<a href=\"/docs/getting-started/\">Docs</a>");
 
         Set<Uri> links = Collector.builder()
                 .base(tempDir.toUri().toString())
@@ -501,23 +362,7 @@ class CollectorTest {
                 .collectLinks(Set.of(new Input.FsPath(tempDir)));
 
         assertThat(links).containsExactly(
-                Uri.file(tempDir.resolve("target").toUri() + "#section"));
-    }
-
-    @Test
-    void testRootClampingPreservesQueryAndFragment(@TempDir Path tempDir) throws IOException {
-        Path sub = tempDir.resolve("docs");
-        Files.createDirectories(sub);
-        Files.writeString(sub.resolve("page.html"),
-                "<a href=\"../../target?foo=bar#section\">Escape</a>");
-
-        Set<Uri> links = Collector.builder()
-                .base(tempDir.toUri().toString())
-                .build()
-                .collectLinks(Set.of(new Input.FsPath(tempDir)));
-
-        assertThat(links).containsExactly(
-                Uri.file(tempDir.resolve("target").toUri() + "?foo=bar#section"));
+                Uri.file(tempDir.resolve("docs/getting-started").toUri() + "/"));
     }
 
     @Test
@@ -529,9 +374,115 @@ class CollectorTest {
                 .build()
                 .collectLinks(Set.of(new Input.StringContent(html)));
 
-        // HTTP base: no clamping, resolves normally
+        // HTTP base: resolves normally via BaseInfo
         assertThat(links).containsExactly(
                 Uri.website("https://example.com/outside"));
+    }
+
+    // --- <base href> resolution tests ---
+
+    @Test
+    void testBaseHrefOverridesResolveBase(@TempDir Path tempDir) throws IOException {
+        // Page has <base href> pointing to /docs/, relative links resolve against it
+        Files.createDirectories(tempDir.resolve("docs"));
+        Files.writeString(tempDir.resolve("page.html"), """
+                <html>
+                <head><base href="%s"></head>
+                <body><a href="guide.html">Link</a></body>
+                </html>
+                """.formatted(tempDir.resolve("docs").toUri()));
+
+        Set<Uri> links = Collector.builder()
+                .base(tempDir.toUri().toString())
+                .build()
+                .collectLinks(Set.of(new Input.FsPath(tempDir)));
+
+        assertThat(links).containsExactly(
+                Uri.file(tempDir.resolve("docs/guide.html").toUri().toString()));
+    }
+
+    @Test
+    void testNoBaseHrefResolvesAgainstFileLocation(@TempDir Path tempDir) throws IOException {
+        // Without <base href>, relative links resolve against the file's directory
+        Path sub = tempDir.resolve("about");
+        Files.createDirectories(sub);
+        Files.writeString(sub.resolve("page.html"), """
+                <html>
+                <body><a href="other.html">Link</a></body>
+                </html>
+                """);
+
+        Set<Uri> links = Collector.builder()
+                .base(tempDir.toUri().toString())
+                .build()
+                .collectLinks(Set.of(new Input.FsPath(tempDir)));
+
+        assertThat(links).containsExactly(
+                Uri.file(sub.resolve("other.html").toUri().toString()));
+    }
+
+    @Test
+    void testBaseHrefRootRelativeResolvesPerSpec(@TempDir Path tempDir) throws IOException {
+        // Per HTML spec, root-relative links resolve against the base href's origin.
+        // With a file: base href, /events/ resolves against file:/// (filesystem root)
+        Files.createDirectories(tempDir.resolve("docs"));
+        Files.writeString(tempDir.resolve("page.html"), """
+                <html>
+                <head><base href="%s"></head>
+                <body><a href="/events/">Link</a></body>
+                </html>
+                """.formatted(tempDir.resolve("docs").toUri()));
+
+        Set<Uri> links = Collector.builder()
+                .base(tempDir.toUri().toString())
+                .build()
+                .collectLinks(Set.of(new Input.FsPath(tempDir)));
+
+        // /events/ resolved against file:/// origin = file:///events/
+        // (SSC would clamp this to site root; Collector does not clamp)
+        assertThat(links).containsExactly(
+                Uri.file("file:///events/"));
+    }
+
+    @Test
+    void testBaseHrefAbsoluteLink(@TempDir Path tempDir) throws IOException {
+        // Absolute links are unaffected by <base href>
+        Files.writeString(tempDir.resolve("page.html"), """
+                <html>
+                <head><base href="%s"></head>
+                <body><a href="https://example.com">Link</a></body>
+                </html>
+                """.formatted(tempDir.resolve("docs/").toUri()));
+
+        Set<Uri> links = Collector.builder()
+                .base(tempDir.toUri().toString())
+                .build()
+                .collectLinks(Set.of(new Input.FsPath(tempDir)));
+
+        assertThat(links).containsExactly(
+                Uri.website("https://example.com"));
+    }
+
+    @Test
+    void testBaseHrefRelativeResolvesAgainstDocumentUrl(@TempDir Path tempDir) throws IOException {
+        // Per spec, a relative <base href> resolves against the document's own URL
+        Path sub = tempDir.resolve("about");
+        Files.createDirectories(sub);
+        Files.writeString(sub.resolve("page.html"), """
+                <html>
+                <head><base href="../docs/"></head>
+                <body><a href="guide.html">Link</a></body>
+                </html>
+                """);
+
+        Set<Uri> links = Collector.builder()
+                .base(tempDir.toUri().toString())
+                .build()
+                .collectLinks(Set.of(new Input.FsPath(tempDir)));
+
+        // ../docs/ from about/page.html resolves to docs/, then guide.html resolves against that
+        assertThat(links).containsExactly(
+                Uri.file(tempDir.resolve("docs/guide.html").toUri().toString()));
     }
 
     /**

@@ -2,6 +2,8 @@ package io.mvnpm.raclette.types;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Path;
+
 import org.junit.jupiter.api.Test;
 
 class UrlUtilsTest {
@@ -189,5 +191,79 @@ class UrlUtilsTest {
     @Test
     void parentDirNoSlash() {
         assertThat(UrlUtils.parentDir("noSlash")).isNull();
+    }
+
+    // --- resolveWithinRoot ---
+
+    @Test
+    void resolveWithinRootAlreadyInside() {
+        Path root = Path.of("/site");
+        Path file = Path.of("/site/docs/page.html");
+        assertThat(UrlUtils.resolveWithinRoot(file, root)).isEqualTo(file);
+    }
+
+    @Test
+    void resolveWithinRootEscapesSingleLevel() {
+        Path root = Path.of("/site");
+        Path file = Path.of("/site/docs/../../outside").normalize(); // /outside
+        assertThat(UrlUtils.resolveWithinRoot(file, root)).isEqualTo(Path.of("/site/outside"));
+    }
+
+    @Test
+    void resolveWithinRootEscapesMultipleLevels() {
+        Path root = Path.of("/site");
+        Path file = Path.of("/site/../../../far/away").normalize(); // /far/away
+        assertThat(UrlUtils.resolveWithinRoot(file, root)).isEqualTo(Path.of("/site/far/away"));
+    }
+
+    @Test
+    void resolveWithinRootEscapesCompletely() {
+        // All segments are "..", falls back to root
+        Path root = Path.of("/site");
+        Path file = Path.of("/site/../../..").normalize(); // /
+        assertThat(UrlUtils.resolveWithinRoot(file, root)).isEqualTo(root);
+    }
+
+    @Test
+    void resolveWithinRootExactlyAtRoot() {
+        Path root = Path.of("/site");
+        assertThat(UrlUtils.resolveWithinRoot(root, root)).isEqualTo(root);
+    }
+
+    // --- clampFileUrl ---
+
+    @Test
+    void clampFileUrlWithinRoot() {
+        String url = "file:///site/docs/page.html";
+        String base = "file:///site/";
+        assertThat(UrlUtils.clampFileUrl(url, base)).isEqualTo(url);
+    }
+
+    @Test
+    void clampFileUrlEscapingRoot() {
+        String url = "file:///outside";
+        String base = "file:///site/";
+        assertThat(UrlUtils.clampFileUrl(url, base)).isEqualTo("file:///site/outside");
+    }
+
+    @Test
+    void clampFileUrlPreservesFragment() {
+        String url = "file:///outside#section";
+        String base = "file:///site/";
+        assertThat(UrlUtils.clampFileUrl(url, base)).isEqualTo("file:///site/outside#section");
+    }
+
+    @Test
+    void clampFileUrlPreservesQuery() {
+        String url = "file:///outside?q=1";
+        String base = "file:///site/";
+        assertThat(UrlUtils.clampFileUrl(url, base)).isEqualTo("file:///site/outside?q=1");
+    }
+
+    @Test
+    void clampFileUrlPreservesQueryAndFragment() {
+        String url = "file:///outside?q=1#section";
+        String base = "file:///site/";
+        assertThat(UrlUtils.clampFileUrl(url, base)).isEqualTo("file:///site/outside?q=1#section");
     }
 }

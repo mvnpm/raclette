@@ -65,6 +65,22 @@ public class HtmlExtractor {
     }
 
     /**
+     * Extract the base href from the first {@code <base href="...">} in the HTML head.
+     * Per HTML spec, only the first {@code <base>} with an href attribute is used.
+     *
+     * @return the base href value, or null if not present or empty
+     */
+    public String extractBaseHref(String html) {
+        Document doc = Jsoup.parse(html, "", Parser.htmlParser());
+        Element base = doc.selectFirst("base[href]");
+        if (base == null) {
+            return null;
+        }
+        String href = base.attr("href").strip();
+        return href.isEmpty() ? null : href;
+    }
+
+    /**
      * Extract all fragment targets (id and name attributes) from HTML content.
      *
      * @param html the HTML content
@@ -135,6 +151,11 @@ public class HtmlExtractor {
 
                 // Don't extract from verbatim blocks
                 if (!includeVerbatim && verbatimDepth > 0) {
+                    return;
+                }
+
+                // Skip <base> elements (their href is resolution context, not a link)
+                if (tag.equals("base")) {
                     return;
                 }
 

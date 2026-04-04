@@ -3,6 +3,7 @@ package io.mvnpm.raclette.checker;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,10 +14,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.mvnpm.raclette.Raclette;
+import io.mvnpm.raclette.collector.CollectedLink;
 import io.mvnpm.raclette.collector.Collector;
 import io.mvnpm.raclette.collector.Input;
 import io.mvnpm.raclette.ratelimit.RateLimitConfig;
 import io.mvnpm.raclette.types.ErrorKind;
+import io.mvnpm.raclette.types.LinkResolutionException;
+import io.mvnpm.raclette.types.ParsedUri;
 import io.mvnpm.raclette.types.Status;
 import io.mvnpm.raclette.types.Uri;
 import io.mvnpm.raclette.types.UrlUtils;
@@ -92,7 +96,9 @@ public class StaticSiteChecker implements AutoCloseable {
      * Check all links and return all results (both successes and failures).
      */
     public Map<Uri, Status> checkAll() {
-        Set<Uri> links = collector.collectLinks(Set.of(new Input.FsPath(path)));
+        // Resolve raw links with classification-aware clamping
+        Set<Uri> links = resolveCollectedLinks(
+                collector.collectRawLinks(Set.of(new Input.FsPath(path))));
 
         // Filter: only FILE uris unless checkRemoteLinks is enabled
         Map<Uri, Uri> toCheck = new LinkedHashMap<>();
@@ -145,6 +151,40 @@ public class StaticSiteChecker implements AutoCloseable {
     }
 
     /**
+     * Resolve collected links, clamping relative file URIs that escape the site root.
+     * Absolute links pass through without clamping.
+     */
+    Set<Uri> resolveCollectedLinks(List<CollectedLink> collected) {
+        Set<Uri> resolved = new LinkedHashSet<>();
+        String siteRootUrl = path.toUri().toString();
+        for (CollectedLink cl : collected) {
+            try {
+                ParsedUri parsed = ParsedUri.parse(cl.rawUri().text());
+                if (parsed == null) {
+                    continue;
+                }
+                Uri uri = switch (parsed) {
+                    case ParsedUri.Absolute a -> a.uri();
+                    case ParsedUri.Relative r -> {
+                        String res = cl.baseInfo().resolveRelativeLink(r.rel());
+                        Uri u = Uri.tryFrom(res);
+                        if (u != null && u.kind() == Uri.UriKind.FILE) {
+                            u = clampToSiteRoot(u, siteRootUrl);
+                        }
+                        yield u;
+                    }
+                };
+                if (uri != null) {
+                    resolved.add(uri);
+                }
+            } catch (LinkResolutionException | IllegalArgumentException e) {
+                // Skip unresolvable or malformed links
+            }
+        }
+        return resolved;
+    }
+
+    /**
      * Rewrite a URI for static site checking.
      * Step 1: rewrite localhost HTTP URLs to file paths.
      * Step 2: strip basePath prefix from file URIs.
@@ -157,6 +197,16 @@ public class StaticSiteChecker implements AutoCloseable {
             uri = stripBasePath(uri);
         }
         return uri;
+    }
+
+    // Static: takes siteRootUrl as parameter because resolveCollectedLinks computes it once,
+    // unlike rewriteUri/rewriteLocalUrlsToFileUri which use the instance field directly.
+    static Uri clampToSiteRoot(Uri uri, String siteRootUrl) {
+        String clamped = UrlUtils.clampFileUrl(uri.url(), siteRootUrl);
+        if (clamped.equals(uri.url())) {
+            return uri;
+        }
+        return Uri.file(clamped);
     }
 
     /**

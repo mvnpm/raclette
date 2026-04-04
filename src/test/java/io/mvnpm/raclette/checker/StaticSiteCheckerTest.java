@@ -8,7 +8,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -18,6 +21,9 @@ import org.junit.jupiter.api.io.TempDir;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 
+import io.mvnpm.raclette.collector.CollectedLink;
+import io.mvnpm.raclette.types.BaseInfo;
+import io.mvnpm.raclette.types.RawUri;
 import io.mvnpm.raclette.types.Status;
 import io.mvnpm.raclette.types.Uri;
 
@@ -523,6 +529,241 @@ class StaticSiteCheckerTest {
                 assertThat(broken.keySet().stream().map(Uri::url))
                         .anyMatch(url -> url.contains("this-page-does-not-exist"));
             }
+        }
+    }
+
+    @Nested
+    class ClampingTest {
+
+        @Test
+        void escapingLinkClampedToSiteRoot(@TempDir Path siteRoot) throws IOException {
+            // ../../outside from docs/ escapes site root, should be clamped to root/outside
+            Files.createDirectories(siteRoot.resolve("docs"));
+            createSite(siteRoot,
+                    "docs/page.html",
+                    "<html><a href=\"../../outside\">Escape</a></html>");
+
+            try (StaticSiteChecker checker = buildChecker(siteRoot, "/")) {
+                Map<Uri, Status> all = checker.checkAll();
+                // The clamped URI should point to siteRoot/outside (not above root)
+                assertThat(all.keySet().stream().map(Uri::url))
+                        .allMatch(url -> url.startsWith(siteRoot.toUri().toString())
+                                || !url.startsWith("file:"));
+            }
+        }
+
+        @Test
+        void escapingLinkWithFragmentPreserved(@TempDir Path siteRoot) throws IOException {
+            Files.createDirectories(siteRoot.resolve("docs"));
+            createSite(siteRoot,
+                    "docs/page.html",
+                    "<html><a href=\"../../target#section\">Escape</a></html>");
+
+            try (StaticSiteChecker checker = buildChecker(siteRoot, "/")) {
+                Map<Uri, Status> all = checker.checkAll();
+                assertThat(all.keySet().stream().map(Uri::url))
+                        .anyMatch(url -> url.contains("target") && url.contains("#section"));
+            }
+        }
+
+        @Test
+        void absoluteFileUriNotClamped(@TempDir Path siteRoot) throws IOException {
+            // Absolute file:// link should pass through without clamping
+            createSite(siteRoot,
+                    "index.html",
+                    "<html><a href=\"file:///other/path/doc\">External</a></html>");
+
+            try (StaticSiteChecker checker = buildChecker(siteRoot, "/")) {
+                Map<Uri, Status> all = checker.checkAll();
+                assertThat(all.keySet().stream().map(Uri::url))
+                        .anyMatch(url -> url.equals("file:///other/path/doc"));
+            }
+        }
+
+        @Test
+        void relativeLinkWithinRootNotClamped(@TempDir Path siteRoot) throws IOException {
+            // ../sibling from docs/ stays within root, no clamping needed
+            Files.createDirectories(siteRoot.resolve("docs"));
+            createSite(siteRoot,
+                    "docs/page.html",
+                    "<html><a href=\"../sibling\">Link</a></html>",
+                    "sibling.html", "<html>Sibling</html>");
+
+            Map<Uri, Status> broken = StaticSiteChecker.builder()
+                    .path(siteRoot)
+                    .sequential(true)
+                    .build()
+                    .check();
+
+            assertThat(broken).isEmpty();
+        }
+    }
+
+    @Nested
+    class ResolveCollectedLinksTest {
+
+        @Test
+        void absoluteLinkPassesThroughWithoutClamping(@TempDir Path siteRoot) {
+            CollectedLink cl = new CollectedLink(
+                    RawUri.ofText("file:///other/path/doc", 1, 1),
+                    BaseInfo.none());
+
+            try (StaticSiteChecker checker = buildChecker(siteRoot, "/")) {
+                Set<Uri> resolved = checker.resolveCollectedLinks(List.of(cl));
+                assertThat(resolved).containsExactly(Uri.file("file:///other/path/doc"));
+            }
+        }
+
+        @Test
+        void relativeLinkClamped(@TempDir Path siteRoot) {
+            // Relative link escaping root gets clamped
+            BaseInfo base = BaseInfo.forFileWithRoot(
+                    siteRoot.resolve("docs/page.html"), siteRoot);
+            CollectedLink cl = new CollectedLink(
+                    RawUri.ofText("../../outside", 1, 1), base);
+
+            try (StaticSiteChecker checker = buildChecker(siteRoot, "/")) {
+                Set<Uri> resolved = checker.resolveCollectedLinks(List.of(cl));
+                assertThat(resolved).hasSize(1);
+                assertThat(resolved.iterator().next().url())
+                        .startsWith(siteRoot.toUri().toString());
+            }
+        }
+
+        @Test
+        void unresolvableLinkSkipped(@TempDir Path siteRoot) {
+            // Root-relative link with None base cannot resolve, should be skipped
+            CollectedLink cl = new CollectedLink(
+                    RawUri.ofText("/docs/page", 1, 1),
+                    BaseInfo.none());
+
+            try (StaticSiteChecker checker = buildChecker(siteRoot, "/")) {
+                Set<Uri> resolved = checker.resolveCollectedLinks(List.of(cl));
+                assertThat(resolved).isEmpty();
+            }
+        }
+
+        @Test
+        void blankLinkTextSkipped(@TempDir Path siteRoot) {
+            CollectedLink cl = new CollectedLink(
+                    RawUri.ofText("", 1, 1),
+                    BaseInfo.none());
+
+            try (StaticSiteChecker checker = buildChecker(siteRoot, "/")) {
+                Set<Uri> resolved = checker.resolveCollectedLinks(List.of(cl));
+                assertThat(resolved).isEmpty();
+            }
+        }
+
+        @Test
+        void httpAbsoluteLinkNotClamped(@TempDir Path siteRoot) {
+            CollectedLink cl = new CollectedLink(
+                    RawUri.ofText("https://example.com/page", 1, 1),
+                    BaseInfo.none());
+
+            try (StaticSiteChecker checker = buildChecker(siteRoot, "/")) {
+                Set<Uri> resolved = checker.resolveCollectedLinks(List.of(cl));
+                assertThat(resolved).containsExactly(Uri.website("https://example.com/page"));
+            }
+        }
+    }
+
+    @Nested
+    class SsgScenarioTest {
+
+        private Path fixtureDir(String scenario) {
+            return Path.of("src/test/resources/fixtures/ssg-scenarios", scenario).toAbsolutePath();
+        }
+
+        /**
+         * Site with no base href, no basePath.
+         * Relative links resolve against each file's parent directory.
+         * Root-relative links resolve against site root.
+         */
+        @Test
+        void siteNoBaseHref() {
+            Path site = fixtureDir("site");
+
+            try (StaticSiteChecker checker = StaticSiteChecker.builder()
+                    .path(site)
+                    .sequential(true)
+                    .build()) {
+                Map<Uri, Status> all = checker.checkAll();
+
+                assertThat(all.values().stream().filter(Status::isSuccess).count()).isEqualTo(5);
+
+                // Broken: missing.html, /my-project/docs/index.html (no basePath configured)
+                Map<Uri, Status> broken = filterBroken(all);
+                assertThat(broken).hasSize(2);
+                assertThat(broken.keySet().stream().map(Uri::url))
+                        .anyMatch(url -> url.contains("missing.html"));
+                assertThat(broken.keySet().stream().map(Uri::url))
+                        .anyMatch(url -> url.contains("my-project"));
+            }
+        }
+
+        /**
+         * Site with {@code <base href="/my-project/">} in about/index.html.
+         * basePath="/my-project/" strips the prefix from resolved file URIs.
+         */
+        @Test
+        void siteWithBaseHref() {
+            Path site = fixtureDir("site-with-base");
+
+            try (StaticSiteChecker checker = StaticSiteChecker.builder()
+                    .path(site)
+                    .basePath("/my-project/")
+                    .sequential(true)
+                    .build()) {
+                Map<Uri, Status> all = checker.checkAll();
+
+                assertThat(all.values().stream().filter(Status::isSuccess).count()).isEqualTo(5);
+
+                // Broken: missing/page.html (from about/index.html via base href)
+                Map<Uri, Status> broken = filterBroken(all);
+                assertThat(broken).hasSize(1);
+                assertThat(broken.keySet().stream().map(Uri::url))
+                        .anyMatch(url -> url.contains("missing"));
+            }
+        }
+
+        /**
+         * Site served under basePath="/my-project/", mix of pages with and without base href.
+         * about/index.html has base href, about/no-base.html doesn't.
+         */
+        @Test
+        void servedWithBasePath() {
+            Path site = fixtureDir("served/my-project");
+
+            try (StaticSiteChecker checker = StaticSiteChecker.builder()
+                    .path(site)
+                    .basePath("/my-project/")
+                    .sequential(true)
+                    .build()) {
+                Map<Uri, Status> all = checker.checkAll();
+
+                assertThat(all.values().stream().filter(Status::isSuccess).count()).isEqualTo(7);
+
+                // Broken: broken/link.html (from about/index.html via base href),
+                // nowhere.html (from about/no-base.html)
+                Map<Uri, Status> broken = filterBroken(all);
+                assertThat(broken).hasSize(2);
+                assertThat(broken.keySet().stream().map(Uri::url))
+                        .anyMatch(url -> url.contains("nowhere"));
+                assertThat(broken.keySet().stream().map(Uri::url))
+                        .anyMatch(url -> url.contains("broken/link"));
+            }
+        }
+
+        private Map<Uri, Status> filterBroken(Map<Uri, Status> all) {
+            Map<Uri, Status> broken = new LinkedHashMap<>();
+            for (var entry : all.entrySet()) {
+                Status s = entry.getValue();
+                if (!s.isSuccess() && !s.isExcluded() && !s.isUnsupported()) {
+                    broken.put(entry.getKey(), entry.getValue());
+                }
+            }
+            return broken;
         }
     }
 

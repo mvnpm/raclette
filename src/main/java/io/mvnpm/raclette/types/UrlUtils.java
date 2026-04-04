@@ -1,6 +1,7 @@
 package io.mvnpm.raclette.types;
 
 import java.net.URI;
+import java.nio.file.Path;
 
 /**
  * Shared URL string manipulation utilities.
@@ -102,5 +103,39 @@ public final class UrlUtils {
     public static String parentDir(String path) {
         int lastSlash = path.lastIndexOf('/');
         return lastSlash >= 0 ? path.substring(0, lastSlash + 1) : null;
+    }
+
+    /**
+     * Resolve a path within a root directory, like a web server document root.
+     * If the path escapes the root via ../, the non-.. suffix is resolved back within root.
+     */
+    public static Path resolveWithinRoot(Path filePath, Path root) {
+        if (filePath.startsWith(root)) {
+            return filePath;
+        }
+        Path relative = root.relativize(filePath);
+        for (int i = 0; i < relative.getNameCount(); i++) {
+            if (!relative.getName(i).toString().equals("..")) {
+                Path safe = root.resolve(relative.subpath(i, relative.getNameCount())).normalize();
+                if (safe.startsWith(root)) {
+                    return safe;
+                }
+                break;
+            }
+        }
+        return root;
+    }
+
+    /**
+     * Clamp a file URL within a root directory, preserving query and fragment.
+     */
+    public static String clampFileUrl(String url, String base) {
+        String stripped = stripQueryAndFragment(url);
+        String suffix = url.substring(stripped.length());
+
+        String pathStr = fileUrlToPath(stripped);
+        String rootStr = fileUrlToPath(base);
+        Path safe = resolveWithinRoot(Path.of(pathStr).normalize(), Path.of(rootStr).normalize());
+        return pathToFileUrl(safe.toString()) + suffix;
     }
 }

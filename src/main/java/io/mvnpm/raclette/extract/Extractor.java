@@ -46,4 +46,11 @@ public class Extractor {
     public List<RawUri> extractHtmlRaw(String html) {
         return htmlExtractor.extractLinks(html, includeVerbatim);
     }
+
+    /**
+     * Extract the base href from the first {@code <base href="...">} in the HTML.
+     */
+    public String extractBaseHref(String html) {
+        return htmlExtractor.extractBaseHref(html);
+    }
 }
