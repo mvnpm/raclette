@@ -486,6 +486,31 @@ class CollectorTest {
     }
 
     /**
+     * File URI base with FsPath input should work cross-platform.
+     * Reproduces the Windows bug where Path.of(URI.getPath()) fails
+     * because URI.getPath() returns "/D:/path" on Windows.
+     */
+    @Test
+    void testFileUriBaseWithFsPath(@TempDir Path tempDir) throws IOException {
+        Path sub = tempDir.resolve("docs");
+        Files.createDirectories(sub);
+        Files.writeString(sub.resolve("page.html"),
+                "<a href=\"other.html\">Link</a><a href=\"/root-link.html\">Root</a>");
+
+        // Use file:// URI as base (this is what Roq's RoqLinks.collect() does)
+        String fileUriBase = tempDir.toAbsolutePath().toUri().toString();
+
+        Set<Uri> links = Collector.builder()
+                .base(fileUriBase)
+                .build()
+                .collectLinks(Set.of(new Input.FsPath(tempDir)));
+
+        assertThat(links).containsExactlyInAnyOrder(
+                Uri.file(sub.resolve("other.html").toUri().toString()),
+                Uri.file(tempDir.resolve("root-link.html").toUri().toString()));
+    }
+
+    /**
      * StringContent input still uses the global base (unchanged behavior).
      */
     @Test
