@@ -70,23 +70,25 @@ layout: home
       </p>
     </div>
 
-    <div class="bg-surface-800 border border-surface-700 rounded-xl p-6 hover:border-accent/40 transition-colors">
-      <div class="flex items-center gap-3 mb-3">
-        <span class="text-accent text-2xl">🌐</span>
-        <h3 class="text-lg font-semibold text-surface-100">Static Site Support</h3>
-      </div>
-      <p class="text-surface-400">
-        One-liner for generated sites (Hugo, Jekyll, Roq) with localhost rewriting, base path stripping, and parallel execution.
-      </p>
-    </div>
-
-    <div class="md:col-span-2 bg-surface-800 border border-accent/20 rounded-xl p-6">
+    <div class="bg-surface-800 border border-accent/20 rounded-xl p-6">
       <div class="flex items-center gap-3 mb-3">
         <span class="text-accent text-2xl">🍒</span>
         <h3 class="text-lg font-semibold text-surface-100">Inspired by lychee</h3>
       </div>
       <p class="text-surface-400">
         Raclette is heavily inspired by <a href="https://github.com/lycheeverse/lychee" class="text-accent hover:text-accent-light underline underline-offset-2">lychee</a>, the excellent async link checker written in Rust. We follow lychee's design philosophy (filtering, quirks system, and overall architecture) and bring it to the JVM.
+      </p>
+    </div>
+
+    <div class="bg-surface-800 border border-accent/20 rounded-xl p-6">
+      <div class="flex items-center gap-3 mb-3">
+        <a href="https://iamroq.dev/docs/advanced/#testing" class="shrink-0">
+          <img src="{site.image('roq-peeking.svg')}" alt="Roq" class="w-12 h-12">
+        </a>
+        <h3 class="text-lg font-semibold text-surface-100">Designed for Roq</h3>
+      </div>
+      <p class="text-surface-400">
+        Built for <a href="https://iamroq.dev/docs/advanced/#testing" class="text-accent hover:text-accent-light underline underline-offset-2">Roq</a>, works with any static site generator. Point it at a served app or a generated directory and let Raclette crawl every link.
       </p>
     </div>
 
