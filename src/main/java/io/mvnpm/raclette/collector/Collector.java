@@ -244,14 +244,14 @@ public class Collector implements AutoCloseable {
             return BaseInfo.fromSourceUrl(base);
         }
         if (base.startsWith("file://")) {
-            return BaseInfo.fromPath(Path.of(URI.create(base).getPath()));
+            return BaseInfo.fromPath(Path.of(URI.create(base)));
         }
         return BaseInfo.fromPath(Path.of(base));
     }
 
     private Path rootPathFromBase() {
         if (base.startsWith("file://")) {
-            return Path.of(URI.create(base).getPath());
+            return Path.of(URI.create(base));
         }
         return Path.of(base);
     }
