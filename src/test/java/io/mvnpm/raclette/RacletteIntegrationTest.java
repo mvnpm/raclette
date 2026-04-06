@@ -201,7 +201,7 @@ class RacletteIntegrationTest {
         // Create the target files
         Files.writeString(tempDir.resolve("target.html"), "<html><body>Hello</body></html>");
 
-        String html = "<a href=\"file://" + tempDir.resolve("target.html") + "\">Target</a>";
+        String html = "<a href=\"" + tempDir.resolve("target.html").toUri() + "\">Target</a>";
 
         Set<Uri> links = Collector.builder()
                 .build()
@@ -223,7 +223,7 @@ class RacletteIntegrationTest {
      */
     @Test
     void testCollectAndCheckMissingFileLinks(@TempDir Path tempDir) {
-        String html = "<a href=\"file://" + tempDir.resolve("nonexistent.html") + "\">Missing</a>";
+        String html = "<a href=\"" + tempDir.resolve("nonexistent.html").toUri() + "\">Missing</a>";
 
         Set<Uri> links = Collector.builder()
                 .build()

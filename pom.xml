@@ -41,6 +41,7 @@
         <junit.version>5.11.4</junit.version>
         <assertj.version>3.27.3</assertj.version>
         <wiremock.version>3.10.0</wiremock.version>
+        <string-paths.version>2.3.0</string-paths.version>
 
         <surefire.plugin.version>3.5.4</surefire.plugin.version>
         <formatter.plugin.version>2.29.0</formatter.plugin.version>
@@ -58,6 +59,13 @@
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
             <version>${jsoup.version}</version>
+        </dependency>
+
+        <!-- String path utilities (platform-agnostic path manipulation) -->
+        <dependency>
+            <groupId>io.quarkiverse.tools</groupId>
+            <artifactId>string-paths</artifactId>
+            <version>${string-paths.version}</version>
         </dependency>
 
         <!-- Test dependencies -->

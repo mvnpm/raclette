@@ -4,6 +4,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 
+import io.quarkiverse.tools.stringpaths.StringPaths;
+
 /**
  * Resolution context for converting relative links into fully-qualified URIs.
  * There should be a 1:1 correspondence between each BaseInfo and its originating input source.
@@ -103,7 +105,7 @@ public sealed interface BaseInfo {
         if (!origin.endsWith("/")) {
             origin += "/";
         }
-        String relativePath = rootDir.relativize(file).toString();
+        String relativePath = StringPaths.toUnixPath(rootDir.relativize(file).toString());
         return new Full(origin, relativePath);
     }
 

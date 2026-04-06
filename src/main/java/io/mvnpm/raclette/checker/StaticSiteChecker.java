@@ -24,6 +24,7 @@ import io.mvnpm.raclette.types.ParsedUri;
 import io.mvnpm.raclette.types.Status;
 import io.mvnpm.raclette.types.Uri;
 import io.mvnpm.raclette.types.UrlUtils;
+import io.quarkiverse.tools.stringpaths.StringPaths;
 
 /**
  * High-level API for checking links in a generated static site directory.
@@ -230,7 +231,7 @@ public class StaticSiteChecker implements AutoCloseable {
 
         // Strip basePath prefix
         if (basePath != null && !basePath.equals("/")) {
-            String prefix = UrlUtils.normalizePathPrefix(basePath);
+            String prefix = StringPaths.surroundWithSlashes(basePath);
             if (pathOnly.startsWith(prefix)) {
                 pathOnly = "/" + pathOnly.substring(prefix.length());
             }
@@ -261,8 +262,8 @@ public class StaticSiteChecker implements AutoCloseable {
         }
 
         String rest = url.substring(siteRootUri.length());
-        // normalizePathPrefix adds leading /, strip it since rest is relative to siteRootUri
-        String prefix = UrlUtils.normalizePathPrefix(basePath).substring(1);
+        // addTrailingSlash only (no leading /) since rest is relative to siteRootUri
+        String prefix = StringPaths.addTrailingSlash(StringPaths.removeLeadingSlash(basePath));
 
         if (rest.startsWith(prefix)) {
             String stripped = siteRootUri + rest.substring(prefix.length());

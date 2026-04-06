@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -33,8 +34,8 @@ class BaseInfoTest {
     }
 
     @Test
-    void testFromPath() {
-        BaseInfo base = BaseInfo.fromPath(Path.of("/file-path"));
+    void testFromPath(@TempDir Path tempDir) {
+        BaseInfo base = BaseInfo.fromPath(tempDir);
         assertThat(base).isInstanceOf(BaseInfo.Full.class);
         BaseInfo.Full full = (BaseInfo.Full) base;
         assertThat(full.origin()).startsWith("file:///");
@@ -49,13 +50,14 @@ class BaseInfoTest {
     }
 
     @Test
-    void testForFileWithRoot() {
+    void testForFileWithRoot(@TempDir Path tempDir) {
+        Path site = tempDir.resolve("site");
         BaseInfo base = BaseInfo.forFileWithRoot(
-                Path.of("/site/about/index.html"),
-                Path.of("/site"));
+                site.resolve("about/index.html"),
+                site);
         assertThat(base).isInstanceOf(BaseInfo.Full.class);
         BaseInfo.Full full = (BaseInfo.Full) base;
-        assertThat(full.origin()).endsWith("/site/");
+        assertThat(full.origin()).isEqualTo(site.toUri() + "/");
         assertThat(full.path()).isEqualTo("about/index.html");
     }
 
@@ -206,25 +208,31 @@ class BaseInfoTest {
     // --- test_forFileWithRoot resolves both local and root relative (new, validates concern #1 fix) ---
 
     @Test
-    void testForFileWithRootResolvesBothLocalAndRootRelative() {
+    void testForFileWithRootResolvesBothLocalAndRootRelative(@TempDir Path tempDir) {
+        Path site = tempDir.resolve("site");
         BaseInfo base = BaseInfo.forFileWithRoot(
-                Path.of("/site/about/index.html"),
-                Path.of("/site"));
+                site.resolve("about/index.html"),
+                site);
+
+        String siteUri = site.toUri().toString();
+        if (!siteUri.endsWith("/")) {
+            siteUri += "/";
+        }
 
         // Local-relative: resolves against the file's parent dir
         Uri local = base.parseUrlText("other.html");
         assertThat(local).isNotNull();
-        assertThat(local.url()).isEqualTo("file:///site/about/other.html");
+        assertThat(local.url()).isEqualTo(siteUri + "about/other.html");
 
         // Root-relative: resolves against the root dir
         Uri root = base.parseUrlText("/docs/index.html");
         assertThat(root).isNotNull();
-        assertThat(root.url()).isEqualTo("file:///site/docs/index.html");
+        assertThat(root.url()).isEqualTo(siteUri + "docs/index.html");
 
         // Parent traversal: stays relative to file location
         Uri parent = base.parseUrlText("../index.html");
         assertThat(parent).isNotNull();
-        assertThat(parent.url()).isEqualTo("file:///site/index.html");
+        assertThat(parent.url()).isEqualTo(siteUri + "index.html");
     }
 
     // --- Absolute links pass through regardless of base ---

@@ -23,6 +23,8 @@ import io.mvnpm.raclette.extract.Extractor;
 import io.mvnpm.raclette.types.BaseInfo;
 import io.mvnpm.raclette.types.LinkResolutionException;
 import io.mvnpm.raclette.types.Uri;
+import io.mvnpm.raclette.types.UrlUtils;
+import io.quarkiverse.tools.stringpaths.StringPaths;
 
 /**
  * Collects links from various input sources (files, globs, remote URLs, strings).
@@ -154,11 +156,11 @@ public class Collector implements AutoCloseable {
     }
 
     private List<CollectedLink> collectRawFromGlob(String pattern) {
-        Path baseDir = findGlobBaseDir(Path.of(pattern));
+        Path baseDir = findGlobBaseDir(pattern);
         if (!Files.isDirectory(baseDir)) {
             return List.of();
         }
-        PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
+        PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + StringPaths.toUnixPath(pattern));
         List<CollectedLink> links = new ArrayList<>();
         try {
             Files.walkFileTree(baseDir, new SimpleFileVisitor<>() {
@@ -210,11 +212,13 @@ public class Collector implements AutoCloseable {
             return fileBase;
         }
         String url = resolved.url();
-        if (url.startsWith("file:///")) {
-            // For file:// base hrefs, use Full with file:/// as origin.
-            // Root-relative links resolve against filesystem root (SSC clamps later).
-            String path = url.substring("file:///".length());
-            return new BaseInfo.Full("file:///", path);
+        if (url.startsWith("file:///") && fileBase instanceof BaseInfo.Full full) {
+            String origin = full.origin();
+            if (url.startsWith(origin)) {
+                // Resolved URL is under the same root (site dir). Keep that root as origin
+                // so root-relative links resolve within the site root on all platforms.
+                return new BaseInfo.Full(origin, url.substring(origin.length()));
+            }
         }
         return BaseInfo.fromSourceUrl(url);
     }
@@ -243,31 +247,46 @@ public class Collector implements AutoCloseable {
         if (base.startsWith("http://") || base.startsWith("https://")) {
             return BaseInfo.fromSourceUrl(base);
         }
-        if (base.startsWith("file://")) {
-            return BaseInfo.fromPath(Path.of(URI.create(base).getPath()));
+        if (base.startsWith("file:/")) {
+            return BaseInfo.fromPath(UrlUtils.fileUrlToPath(base));
         }
         return BaseInfo.fromPath(Path.of(base));
     }
 
     private Path rootPathFromBase() {
-        if (base.startsWith("file://")) {
-            return Path.of(URI.create(base).getPath());
+        if (base.startsWith("file:/")) {
+            return UrlUtils.fileUrlToPath(base);
         }
         return Path.of(base);
     }
 
     // --- Utilities ---
 
-    private static Path findGlobBaseDir(Path patternPath) {
-        Path result = patternPath.isAbsolute() ? patternPath.getRoot() : Path.of(".");
-        for (Path part : patternPath) {
-            String s = part.toString();
-            if (s.contains("*") || s.contains("?") || s.contains("[") || s.contains("{")) {
+    /**
+     * Extract the base directory from a glob pattern string.
+     * Parses as a string to avoid {@code Path.of(glob)} which fails on Windows
+     * because {@code *} and {@code ?} are illegal path characters.
+     */
+    static Path findGlobBaseDir(String pattern) {
+        String normalized = StringPaths.toUnixPath(pattern);
+        String[] segments = normalized.split("/", -1);
+        StringBuilder base = new StringBuilder();
+        boolean first = true;
+        for (String seg : segments) {
+            if (seg.contains("*") || seg.contains("?") || seg.contains("[") || seg.contains("{")) {
                 break;
             }
-            result = result.resolve(part);
+            if (!first) {
+                base.append('/');
+            }
+            first = false;
+            base.append(seg);
         }
-        return result;
+        String result = base.toString();
+        if (result.isEmpty()) {
+            return Path.of(".");
+        }
+        return Path.of(result);
     }
 
     private static boolean isHtmlFile(Path file) {

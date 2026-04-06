@@ -109,4 +109,19 @@ class UriTest {
         assertThat(uri).isNotNull();
         assertThat(uri.kind()).isEqualTo(Uri.UriKind.FILE);
     }
+
+    @Test
+    void testFileUriSingleSlash() {
+        // File.toURI() on macOS/Linux produces file:/path
+        Uri uri = Uri.tryFrom("file:/path/to/file");
+        assertThat(uri).isNotNull();
+        assertThat(uri.kind()).isEqualTo(Uri.UriKind.FILE);
+    }
+
+    @Test
+    void testFileUriDoubleSlash() {
+        Uri uri = Uri.tryFrom("file://path/to/file");
+        assertThat(uri).isNotNull();
+        assertThat(uri.kind()).isEqualTo(Uri.UriKind.FILE);
+    }
 }

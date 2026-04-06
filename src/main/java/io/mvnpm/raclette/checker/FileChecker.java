@@ -188,15 +188,7 @@ public class FileChecker {
         }
     }
 
-    /**
-     * Convert a file:// URI to a Path, stripping query and fragment first.
-     */
     private static Path uriToPath(Uri uri) {
-        try {
-            String pathStr = UrlUtils.fileUrlToPath(UrlUtils.stripQueryAndFragment(uri.url()));
-            return Path.of(pathStr);
-        } catch (Exception e) {
-            return null;
-        }
+        return UrlUtils.fileUrlToPath(UrlUtils.stripQueryAndFragment(uri.url()));
     }
 }

@@ -3,6 +3,8 @@ package io.mvnpm.raclette.types;
 import java.net.URI;
 import java.nio.file.Path;
 
+import io.quarkiverse.tools.stringpaths.StringPaths;
+
 /**
  * Shared URL string manipulation utilities.
  * Operates on URL strings without constructing URI objects except where
@@ -51,44 +53,71 @@ public final class UrlUtils {
     }
 
     /**
-     * Convert a file: URL to a filesystem path string.
-     * Tries URI.create() first for proper percent-decoding, falls back to manual
-     * prefix stripping when the URL contains already-decoded characters (spaces,
-     * apostrophes, Unicode) that URI.create() can't parse.
+     * Convert a file: URL string to a {@link Path}.
+     * Single entry point for all file URI to Path conversion, cross-platform safe.
+     * <p>
+     * Uses {@code Path.of(URI)} for proper percent-decoding and platform handling.
+     * Falls back to string-based parsing for URIs with already-decoded characters
+     * (spaces, apostrophes, Unicode) that {@code URI.create()} can't parse.
+     *
+     * @return the filesystem Path, or null if the URL cannot be converted
      */
-    public static String fileUrlToPath(String url) {
+    public static Path fileUrlToPath(String url) {
+        if (!url.startsWith("file:")) {
+            return null;
+        }
+        String normalized = normalizeFileUrl(url);
+        try {
+            return Path.of(URI.create(normalized));
+        } catch (Exception e) {
+            try {
+                return Path.of(fileUrlToPathString(url));
+            } catch (Exception e2) {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Convert a file: URL to a filesystem path string.
+     * Tries URI parsing first for proper percent-decoding, falls back to manual
+     * prefix stripping when the URL contains already-decoded characters.
+     * Strips leading / before Windows drive letters (e.g., /C:/ to C:/).
+     */
+    public static String fileUrlToPathString(String url) {
         if (url.startsWith("file:")) {
             try {
-                return URI.create(url).getPath();
+                String path = URI.create(url).getPath();
+                return stripDriveLetterSlash(path);
             } catch (IllegalArgumentException e) {
                 String path = url.substring("file:".length());
                 while (path.startsWith("//")) {
                     path = path.substring(1);
                 }
-                return path;
+                return stripDriveLetterSlash(path);
             }
         }
         return url;
     }
 
     /**
-     * Convert a filesystem path to a file: URL.
+     * Strip leading / before a Windows drive letter (e.g., /C:/path to C:/path).
+     * Safe to call on Unix paths (no-op since they don't match the pattern).
      */
-    public static String pathToFileUrl(String path) {
-        return path.startsWith("/") ? "file://" + path : "file:///" + path;
+    private static String stripDriveLetterSlash(String path) {
+        if (path.length() >= 3 && path.charAt(0) == '/' && path.charAt(2) == ':') {
+            return path.substring(1);
+        }
+        return path;
     }
 
     /**
-     * Normalize a path prefix to have leading / and trailing /.
+     * Convert a filesystem path to a file: URL.
+     * Normalizes backslashes to forward slashes for Windows compatibility.
      */
-    public static String normalizePathPrefix(String prefix) {
-        if (!prefix.startsWith("/")) {
-            prefix = "/" + prefix;
-        }
-        if (!prefix.endsWith("/")) {
-            prefix = prefix + "/";
-        }
-        return prefix;
+    public static String pathToFileUrl(String path) {
+        path = StringPaths.toUnixPath(path);
+        return path.startsWith("/") ? "file://" + path : "file:///" + path;
     }
 
     /**
@@ -96,7 +125,6 @@ public final class UrlUtils {
      */
     public static String normalizeFileUrl(String url) {
         if (url.startsWith("file:/") && !url.startsWith("file:///")) {
-            // Strip file:/ or file:// prefix, then re-add file:///
             String rest = url.substring("file:".length());
             while (rest.startsWith("/")) {
                 rest = rest.substring(1);
@@ -144,9 +172,9 @@ public final class UrlUtils {
         String stripped = stripQueryAndFragment(url);
         String suffix = url.substring(stripped.length());
 
-        String pathStr = fileUrlToPath(stripped);
-        String rootStr = fileUrlToPath(base);
-        Path safe = resolveWithinRoot(Path.of(pathStr).normalize(), Path.of(rootStr).normalize());
+        Path filePath = fileUrlToPath(stripped);
+        Path rootPath = fileUrlToPath(base);
+        Path safe = resolveWithinRoot(filePath.normalize(), rootPath.normalize());
         return pathToFileUrl(safe.toString()) + suffix;
     }
 }
