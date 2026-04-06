@@ -46,7 +46,7 @@ public final class Uri implements Comparable<Uri> {
         if (input.startsWith("tel:")) {
             return new Uri(input, UriKind.TEL);
         }
-        if (input.startsWith("file://")) {
+        if (input.startsWith("file:/")) {
             return new Uri(input, UriKind.FILE);
         }
         if (input.startsWith("http://") || input.startsWith("https://")) {

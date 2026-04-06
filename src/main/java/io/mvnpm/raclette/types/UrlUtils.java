@@ -3,6 +3,8 @@ package io.mvnpm.raclette.types;
 import java.net.URI;
 import java.nio.file.Path;
 
+import io.quarkiverse.tools.stringpaths.StringPaths;
+
 /**
  * Shared URL string manipulation utilities.
  * Operates on URL strings without constructing URI objects except where
@@ -73,22 +75,11 @@ public final class UrlUtils {
 
     /**
      * Convert a filesystem path to a file: URL.
+     * Normalizes backslashes to forward slashes for Windows compatibility.
      */
     public static String pathToFileUrl(String path) {
+        path = StringPaths.toUnixPath(path);
         return path.startsWith("/") ? "file://" + path : "file:///" + path;
-    }
-
-    /**
-     * Normalize a path prefix to have leading / and trailing /.
-     */
-    public static String normalizePathPrefix(String prefix) {
-        if (!prefix.startsWith("/")) {
-            prefix = "/" + prefix;
-        }
-        if (!prefix.endsWith("/")) {
-            prefix = prefix + "/";
-        }
-        return prefix;
     }
 
     /**
@@ -144,9 +135,9 @@ public final class UrlUtils {
         String stripped = stripQueryAndFragment(url);
         String suffix = url.substring(stripped.length());
 
-        String pathStr = fileUrlToPath(stripped);
-        String rootStr = fileUrlToPath(base);
-        Path safe = resolveWithinRoot(Path.of(pathStr).normalize(), Path.of(rootStr).normalize());
+        Path filePath = Path.of(URI.create(normalizeFileUrl(stripped)));
+        Path rootPath = Path.of(URI.create(normalizeFileUrl(base)));
+        Path safe = resolveWithinRoot(filePath.normalize(), rootPath.normalize());
         return pathToFileUrl(safe.toString()) + suffix;
     }
 }

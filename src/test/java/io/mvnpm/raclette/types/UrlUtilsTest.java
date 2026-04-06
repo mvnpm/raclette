@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class UrlUtilsTest {
 
@@ -132,33 +133,6 @@ class UrlUtilsTest {
         assertThat(UrlUtils.pathToFileUrl("/path/to/dir/")).isEqualTo("file:///path/to/dir/");
     }
 
-    // --- normalizePathPrefix ---
-
-    @Test
-    void normalizePathPrefixNoSlashes() {
-        assertThat(UrlUtils.normalizePathPrefix("raclette")).isEqualTo("/raclette/");
-    }
-
-    @Test
-    void normalizePathPrefixLeadingOnly() {
-        assertThat(UrlUtils.normalizePathPrefix("/raclette")).isEqualTo("/raclette/");
-    }
-
-    @Test
-    void normalizePathPrefixTrailingOnly() {
-        assertThat(UrlUtils.normalizePathPrefix("raclette/")).isEqualTo("/raclette/");
-    }
-
-    @Test
-    void normalizePathPrefixBothSlashes() {
-        assertThat(UrlUtils.normalizePathPrefix("/raclette/")).isEqualTo("/raclette/");
-    }
-
-    @Test
-    void normalizePathPrefixJustSlash() {
-        assertThat(UrlUtils.normalizePathPrefix("/")).isEqualTo("/");
-    }
-
     // --- normalizeFileUrl ---
 
     @Test
@@ -274,5 +248,22 @@ class UrlUtilsTest {
         String url = "file:///outside?q=1#section";
         String base = "file:///site/";
         assertThat(UrlUtils.clampFileUrl(url, base)).isEqualTo("file:///site/outside?q=1#section");
+    }
+
+    @Test
+    void clampFileUrlCrossPlatform(@TempDir Path tempDir) {
+        String base = tempDir.toUri().toString();
+        String url = tempDir.resolve("docs/page.html").toUri().toString();
+        String result = UrlUtils.clampFileUrl(url, base);
+        assertThat(result).isEqualTo(tempDir.resolve("docs/page.html").toUri().toString());
+    }
+
+    @Test
+    void clampFileUrlCrossPlatformEscaping(@TempDir Path tempDir) {
+        String base = tempDir.toUri().toString();
+        // Build a URL that escapes the root
+        String escapingUrl = tempDir.resolve("../outside").normalize().toUri().toString();
+        String result = UrlUtils.clampFileUrl(escapingUrl, base);
+        assertThat(result).isEqualTo(tempDir.resolve("outside").toUri().toString());
     }
 }

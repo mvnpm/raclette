@@ -57,7 +57,7 @@ class CollectorTest {
                         new Input.StringContent(TEST_STRING),
                         new Input.RemoteUrl(wmInfo.getHttpBaseUrl()),
                         new Input.FsPath(tempDir.resolve("f")),
-                        new Input.FsGlob(tempDir.resolve("glob*").toString())));
+                        new Input.FsGlob(tempDir + "/glob*")));
 
         assertThat(links).containsExactlyInAnyOrder(
                 Uri.website(TEST_STRING),
@@ -239,7 +239,7 @@ class CollectorTest {
      * Translated from lychee's test_file_path_with_base.
      */
     @Test
-    void testFilePathWithBase() {
+    void testFilePathWithBase(@TempDir Path tempDir) {
         String html = """
                 <a href="index.html">Index</a>
                 <a href="about.html">About</a>
@@ -247,18 +247,28 @@ class CollectorTest {
                 <a href="/another.html">Another</a>
                 """;
 
+        Path root = tempDir.resolve("path/to/root");
+        String rootUri = root.toUri().toString();
+        if (!rootUri.endsWith("/")) {
+            rootUri += "/";
+        }
+        String parentUri = root.getParent().toUri().toString();
+        if (!parentUri.endsWith("/")) {
+            parentUri += "/";
+        }
+
         Set<Uri> links = Collector.builder()
-                .base("/path/to/root")
+                .base(root.toString())
                 .build()
                 .collectLinks(Set.of(new Input.StringContent(html)));
 
         Set<String> linkUrls = links.stream().map(Uri::url).collect(Collectors.toSet());
 
         assertThat(linkUrls).containsExactlyInAnyOrder(
-                "file:///path/to/root/index.html",
-                "file:///path/to/root/about.html",
-                "file:///path/to/up.html",
-                "file:///path/to/root/another.html");
+                rootUri + "index.html",
+                rootUri + "about.html",
+                parentUri + "up.html",
+                rootUri + "another.html");
     }
 
     /**
@@ -297,11 +307,33 @@ class CollectorTest {
         Set<Uri> links = Collector.builder()
                 .build()
                 .collectLinks(Set.of(
-                        new Input.FsGlob(tempDir.resolve("*.html").toString())));
+                        new Input.FsGlob(tempDir + "/*.html")));
 
         // Only HTML files matched by glob
         assertThat(links).containsExactlyInAnyOrder(
                 Uri.website("https://example.com/html"));
+    }
+
+    /**
+     * Glob with nested directory prefix correctly extracts the base dir.
+     */
+    @Test
+    void testCollectFromGlobWithNestedBase(@TempDir Path tempDir) throws IOException {
+        Path sub = tempDir.resolve("docs");
+        Files.createDirectories(sub);
+        Files.writeString(sub.resolve("guide.html"),
+                "<a href=\"https://example.com/guide\">Link</a>");
+        Files.writeString(tempDir.resolve("root.html"),
+                "<a href=\"https://example.com/root\">Link</a>");
+
+        Set<Uri> links = Collector.builder()
+                .build()
+                .collectLinks(Set.of(
+                        new Input.FsGlob(tempDir + "/docs/*.html")));
+
+        // Only files under docs/ matched
+        assertThat(links).containsExactlyInAnyOrder(
+                Uri.website("https://example.com/guide"));
     }
 
     // --- Per-file base resolution ---
@@ -524,5 +556,62 @@ class CollectorTest {
 
         assertThat(links).containsExactlyInAnyOrder(
                 Uri.website("https://example.com/docs/relative"));
+    }
+
+    // --- findGlobBaseDir direct tests ---
+
+    @Test
+    void testFindGlobBaseDirAbsoluteUnix() {
+        assertThat(Collector.findGlobBaseDir("/tmp/docs/*.html"))
+                .isEqualTo(Path.of("/tmp/docs"));
+    }
+
+    @Test
+    void testFindGlobBaseDirRelative() {
+        assertThat(Collector.findGlobBaseDir("docs/*.html"))
+                .isEqualTo(Path.of("docs"));
+    }
+
+    @Test
+    void testFindGlobBaseDirPatternOnly() {
+        assertThat(Collector.findGlobBaseDir("**/*.html"))
+                .isEqualTo(Path.of("."));
+    }
+
+    @Test
+    void testFindGlobBaseDirSingleWildcard() {
+        assertThat(Collector.findGlobBaseDir("*.html"))
+                .isEqualTo(Path.of("."));
+    }
+
+    @Test
+    void testFindGlobBaseDirEmpty() {
+        assertThat(Collector.findGlobBaseDir(""))
+                .isEqualTo(Path.of("."));
+    }
+
+    @Test
+    void testFindGlobBaseDirNoWildcard() {
+        assertThat(Collector.findGlobBaseDir("docs/pages/file.html"))
+                .isEqualTo(Path.of("docs/pages/file.html"));
+    }
+
+    @Test
+    void testFindGlobBaseDirBackslashes() {
+        // Windows-style separators are normalized
+        assertThat(Collector.findGlobBaseDir("docs\\pages\\*.html"))
+                .isEqualTo(Path.of("docs/pages"));
+    }
+
+    @Test
+    void testFindGlobBaseDirBracketGlob() {
+        assertThat(Collector.findGlobBaseDir("docs/[abc]/*.html"))
+                .isEqualTo(Path.of("docs"));
+    }
+
+    @Test
+    void testFindGlobBaseDirBraceGlob() {
+        assertThat(Collector.findGlobBaseDir("docs/{a,b}/*.html"))
+                .isEqualTo(Path.of("docs"));
     }
 }

@@ -46,7 +46,7 @@ class ClientTest {
     void testFile() throws Exception {
         File tempFile = File.createTempFile("raclette-test", ".html");
         tempFile.deleteOnExit();
-        String uri = "file://" + tempFile.getAbsolutePath();
+        String uri = tempFile.toURI().toString();
 
         try (Client client = Client.builder().build()) {
             Status status = client.check(uri);
