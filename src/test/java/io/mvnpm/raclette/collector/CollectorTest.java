@@ -456,7 +456,7 @@ class CollectorTest {
     @Test
     void testBaseHrefRootRelativeResolvesPerSpec(@TempDir Path tempDir) throws IOException {
         // Per HTML spec, root-relative links resolve against the base href's origin.
-        // With a file: base href, /events/ resolves against file:/// (filesystem root)
+        // With a file: base href under the site root, /events/ resolves within the site root.
         Files.createDirectories(tempDir.resolve("docs"));
         Files.writeString(tempDir.resolve("page.html"), """
                 <html>
@@ -470,10 +470,12 @@ class CollectorTest {
                 .build()
                 .collectLinks(Set.of(new Input.FsPath(tempDir)));
 
-        // /events/ resolved against file:/// origin = file:///events/
-        // (SSC would clamp this to site root; Collector does not clamp)
-        assertThat(links).containsExactly(
-                Uri.file("file:///events/"));
+        // /events/ resolves within the site root (the Collector's base)
+        String expected = tempDir.resolve("events").toUri().toString();
+        if (!expected.endsWith("/")) {
+            expected += "/";
+        }
+        assertThat(links).containsExactly(Uri.file(expected));
     }
 
     @Test

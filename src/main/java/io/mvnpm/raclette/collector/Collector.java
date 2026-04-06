@@ -212,12 +212,13 @@ public class Collector implements AutoCloseable {
             return fileBase;
         }
         String url = resolved.url();
-        if (url.startsWith("file:///")) {
-            // For file:// base hrefs, use Full with file:/// as origin.
-            // Root-relative links resolve against filesystem root (SSC clamps later).
-            // Keep leading "/" so Windows drive letters (C:/) aren't mistaken for URI schemes.
-            String path = url.substring("file://".length());
-            return new BaseInfo.Full("file:///", path);
+        if (url.startsWith("file:///") && fileBase instanceof BaseInfo.Full full) {
+            String origin = full.origin();
+            if (url.startsWith(origin)) {
+                // Resolved URL is under the same root (site dir). Keep that root as origin
+                // so root-relative links resolve within the site root on all platforms.
+                return new BaseInfo.Full(origin, url.substring(origin.length()));
+            }
         }
         return BaseInfo.fromSourceUrl(url);
     }
