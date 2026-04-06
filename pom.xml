@@ -5,7 +5,7 @@
     <groupId>io.mvnpm</groupId>
     <artifactId>raclette</artifactId>
     <name>Raclette - Java Link Checker</name>
-    <version>999-SNAPSHOT</version>
+    <version>0.1.0.CR3</version>
 
     <description>Java link checker library, equivalent to lychee</description>
     <url>https://github.com/mvnpm/raclette/</url>
@@ -13,7 +13,7 @@
         <connection>scm:git:git://github.com/mvnpm/raclette.git</connection>
         <developerConnection>scm:git:ssh://github.com:mvnpm/raclette.git</developerConnection>
         <url>http://github.com/mvnpm/raclette/tree/main</url>
-        <tag>HEAD</tag>
+        <tag>0.1.0.CR3</tag>
     </scm>
     <licenses>
         <license>
