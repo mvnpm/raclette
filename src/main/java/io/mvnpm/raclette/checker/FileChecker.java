@@ -1,7 +1,6 @@
 package io.mvnpm.raclette.checker;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -189,23 +188,7 @@ public class FileChecker {
         }
     }
 
-    /**
-     * Convert a file:// URI to a Path, stripping query and fragment first.
-     * Uses Path.of(URI) for proper cross-platform conversion (handles Windows drive letters).
-     * Falls back to string-based conversion for URIs with already-decoded characters.
-     */
     private static Path uriToPath(Uri uri) {
-        String stripped = UrlUtils.stripQueryAndFragment(uri.url());
-        try {
-            String normalized = UrlUtils.normalizeFileUrl(stripped);
-            return Path.of(URI.create(normalized));
-        } catch (Exception e) {
-            // Fallback for URIs with already-decoded characters (spaces, Unicode)
-            try {
-                return Path.of(UrlUtils.fileUrlToPath(stripped));
-            } catch (Exception e2) {
-                return null;
-            }
-        }
+        return UrlUtils.fileUrlToPath(UrlUtils.stripQueryAndFragment(uri.url()));
     }
 }

@@ -90,43 +90,65 @@ class UrlUtilsTest {
         assertThat(UrlUtils.extractFragment("file:///path#")).isEmpty();
     }
 
-    // --- fileUrlToPath ---
+    // --- fileUrlToPathString ---
 
     @Test
-    void fileUrlToPathTripleSlash() {
-        assertThat(UrlUtils.fileUrlToPath("file:///path/to/file")).isEqualTo("/path/to/file");
+    void fileUrlToPathStringTripleSlash() {
+        assertThat(UrlUtils.fileUrlToPathString("file:///path/to/file")).isEqualTo("/path/to/file");
     }
 
     @Test
-    void fileUrlToPathSingleSlash() {
-        assertThat(UrlUtils.fileUrlToPath("file:/path/to/file")).isEqualTo("/path/to/file");
+    void fileUrlToPathStringSingleSlash() {
+        assertThat(UrlUtils.fileUrlToPathString("file:/path/to/file")).isEqualTo("/path/to/file");
     }
 
     @Test
-    void fileUrlToPathPercentEncoded() {
-        assertThat(UrlUtils.fileUrlToPath("file:///path/my%20file.html")).isEqualTo("/path/my file.html");
+    void fileUrlToPathStringPercentEncoded() {
+        assertThat(UrlUtils.fileUrlToPathString("file:///path/my%20file.html")).isEqualTo("/path/my file.html");
     }
 
     @Test
-    void fileUrlToPathDecodedUnicodeAndSpecialChars() {
-        // Reproduces the bug: Collector produces file URIs with decoded characters
-        // (spaces, apostrophes, accented chars) that URI.create() can't handle
+    void fileUrlToPathStringDecodedUnicodeAndSpecialChars() {
         String url = "file:///site/posts/c'est de la poussi\u00e8re d'\u00e9toile.jpg";
-        assertThat(UrlUtils.fileUrlToPath(url))
+        assertThat(UrlUtils.fileUrlToPathString(url))
                 .isEqualTo("/site/posts/c'est de la poussi\u00e8re d'\u00e9toile.jpg");
     }
 
     @Test
-    void fileUrlToPathDecodedUnicodeWithDriveLetter() {
-        // Windows drive letter path with decoded special chars (fallback strips leading /)
+    void fileUrlToPathStringDecodedUnicodeWithDriveLetter() {
         String url = "file:///C:/site/posts/c'est de la poussi\u00e8re d'\u00e9toile.jpg";
-        assertThat(UrlUtils.fileUrlToPath(url))
+        assertThat(UrlUtils.fileUrlToPathString(url))
                 .isEqualTo("C:/site/posts/c'est de la poussi\u00e8re d'\u00e9toile.jpg");
     }
 
     @Test
-    void fileUrlToPathNonFilePassthrough() {
-        assertThat(UrlUtils.fileUrlToPath("/plain/path")).isEqualTo("/plain/path");
+    void fileUrlToPathStringNonFilePassthrough() {
+        assertThat(UrlUtils.fileUrlToPathString("/plain/path")).isEqualTo("/plain/path");
+    }
+
+    // --- fileUrlToPath (returns Path) ---
+
+    @Test
+    void fileUrlToPathReturnsCorrectPath(@TempDir Path tempDir) {
+        String url = tempDir.resolve("page.html").toUri().toString();
+        assertThat(UrlUtils.fileUrlToPath(url)).isEqualTo(tempDir.resolve("page.html"));
+    }
+
+    @Test
+    void fileUrlToPathWithDecodedChars(@TempDir Path tempDir) throws Exception {
+        Path file = tempDir.resolve("my file.html");
+        java.nio.file.Files.writeString(file, "test");
+        // Build URI with decoded space (simulates what the collector pipeline can produce)
+        String url = "file:///" + io.quarkiverse.tools.stringpaths.StringPaths.toUnixPath(
+                file.toAbsolutePath().toString());
+        Path result = UrlUtils.fileUrlToPath(url);
+        assertThat(result).isNotNull();
+        assertThat(java.nio.file.Files.exists(result)).isTrue();
+    }
+
+    @Test
+    void fileUrlToPathNonFileReturnsNull() {
+        assertThat(UrlUtils.fileUrlToPath("not-a-file-url")).isNull();
     }
 
     // --- pathToFileUrl ---

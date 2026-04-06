@@ -23,6 +23,7 @@ import io.mvnpm.raclette.extract.Extractor;
 import io.mvnpm.raclette.types.BaseInfo;
 import io.mvnpm.raclette.types.LinkResolutionException;
 import io.mvnpm.raclette.types.Uri;
+import io.mvnpm.raclette.types.UrlUtils;
 import io.quarkiverse.tools.stringpaths.StringPaths;
 
 /**
@@ -246,14 +247,14 @@ public class Collector implements AutoCloseable {
             return BaseInfo.fromSourceUrl(base);
         }
         if (base.startsWith("file:/")) {
-            return BaseInfo.fromPath(Path.of(URI.create(base)));
+            return BaseInfo.fromPath(UrlUtils.fileUrlToPath(base));
         }
         return BaseInfo.fromPath(Path.of(base));
     }
 
     private Path rootPathFromBase() {
         if (base.startsWith("file:/")) {
-            return Path.of(URI.create(base));
+            return UrlUtils.fileUrlToPath(base);
         }
         return Path.of(base);
     }
