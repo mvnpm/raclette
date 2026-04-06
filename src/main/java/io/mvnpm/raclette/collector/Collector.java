@@ -159,7 +159,7 @@ public class Collector implements AutoCloseable {
         if (!Files.isDirectory(baseDir)) {
             return List.of();
         }
-        PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
+        PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + StringPaths.toUnixPath(pattern));
         List<CollectedLink> links = new ArrayList<>();
         try {
             Files.walkFileTree(baseDir, new SimpleFileVisitor<>() {
@@ -214,7 +214,8 @@ public class Collector implements AutoCloseable {
         if (url.startsWith("file:///")) {
             // For file:// base hrefs, use Full with file:/// as origin.
             // Root-relative links resolve against filesystem root (SSC clamps later).
-            String path = url.substring("file:///".length());
+            // Keep leading "/" so Windows drive letters (C:/) aren't mistaken for URI schemes.
+            String path = url.substring("file://".length());
             return new BaseInfo.Full("file:///", path);
         }
         return BaseInfo.fromSourceUrl(url);

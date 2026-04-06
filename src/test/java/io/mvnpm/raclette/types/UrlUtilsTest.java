@@ -117,6 +117,14 @@ class UrlUtilsTest {
     }
 
     @Test
+    void fileUrlToPathDecodedUnicodeWithDriveLetter() {
+        // Windows drive letter path with decoded special chars (fallback strips leading /)
+        String url = "file:///C:/site/posts/c'est de la poussi\u00e8re d'\u00e9toile.jpg";
+        assertThat(UrlUtils.fileUrlToPath(url))
+                .isEqualTo("C:/site/posts/c'est de la poussi\u00e8re d'\u00e9toile.jpg");
+    }
+
+    @Test
     void fileUrlToPathNonFilePassthrough() {
         assertThat(UrlUtils.fileUrlToPath("/plain/path")).isEqualTo("/plain/path");
     }

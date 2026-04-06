@@ -67,6 +67,10 @@ public final class UrlUtils {
                 while (path.startsWith("//")) {
                     path = path.substring(1);
                 }
+                // On Windows, strip leading / before drive letter (e.g., /C:/ -> C:/)
+                if (path.length() >= 3 && path.charAt(0) == '/' && path.charAt(2) == ':') {
+                    path = path.substring(1);
+                }
                 return path;
             }
         }

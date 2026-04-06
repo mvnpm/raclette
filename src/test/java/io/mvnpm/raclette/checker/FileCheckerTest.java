@@ -98,13 +98,13 @@ class FileCheckerTest {
         Path resolved = checker.resolveLocalPath(FIXTURES_PATH.resolve("filechecker/index_dir"),
                 fixtureUri("filechecker/index_dir"));
         assertThat(resolved).isNotNull();
-        assertThat(resolved.toString()).endsWith("index_dir/index.html");
+        assertThat(resolved).endsWith(Path.of("index_dir/index.html"));
 
         // index_md should resolve to index_md/index.md
         resolved = checker.resolveLocalPath(FIXTURES_PATH.resolve("filechecker/index_md"),
                 fixtureUri("filechecker/index_md"));
         assertThat(resolved).isNotNull();
-        assertThat(resolved.toString()).endsWith("index_md/index.md");
+        assertThat(resolved).endsWith(Path.of("index_md/index.md"));
     }
 
     @Test
@@ -213,7 +213,7 @@ class FileCheckerTest {
                 FIXTURES_PATH.resolve("filechecker/empty_dir"),
                 fixtureUriWithFragment("filechecker/empty_dir", "fragment"));
         assertThat(resolved).isNotNull();
-        assertThat(resolved.toString()).contains("index_dir/index.html");
+        assertThat(resolved).endsWith(Path.of("index_dir/index.html"));
 
         // Absolute path to index file
         String absoluteHtml = FIXTURES_PATH.resolve("filechecker/index_dir/index.html")
@@ -225,7 +225,7 @@ class FileCheckerTest {
                 FIXTURES_PATH.resolve("filechecker/empty_dir"),
                 fixtureUriWithFragment("filechecker/empty_dir", "fragment"));
         assertThat(resolved).isNotNull();
-        assertThat(resolved.toString()).endsWith("index_dir/index.html");
+        assertThat(resolved).endsWith(Path.of("index_dir/index.html"));
     }
 
     // --- test_fallback_extensions_on_directories ---
